@@ -1,4 +1,5 @@
 import FDBKeyRange from "../FDBKeyRange";
+import { binarySearchByKey } from "./binarySearch";
 import cmp from "./cmp";
 import { Key, Record } from "./types";
 
@@ -12,9 +13,7 @@ class RecordStore {
             });
         }
 
-        return this.records.find(record => {
-            return cmp(record.key, key) === 0;
-        });
+        return binarySearchByKey(this.records, key);
     }
 
     public add(newRecord: Record) {
