@@ -2,9 +2,11 @@ import FDBKeyRange from "../FDBKeyRange";
 import cmp from "./cmp";
 import { Key, Record } from "./types";
 
-// Classic binary search implementation. Returns the index where the key
-// should be inserted, assuming the records list is ordered.
-function binarySearch(records: Record[], key: Key) {
+/**
+ * Classic binary search implementation. Returns the index where the key
+ * should be inserted, assuming the records list is ordered.
+ */
+function binarySearch(records: Record[], key: Key): number {
     let low = 0;
     let high = records.length;
     let mid;
@@ -71,7 +73,7 @@ export function getIndexByKeyRange(
 export function getByKeyRange(
     records: Record[],
     keyRange: FDBKeyRange,
-): Record {
+): Record | undefined {
     const idx = getIndexByKeyRange(records, keyRange);
     return records[idx];
 }
