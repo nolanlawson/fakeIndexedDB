@@ -1,5 +1,11 @@
 import FDBKeyRange from "../FDBKeyRange";
-import { binarySearchByKey } from "./binarySearch";
+import {
+    findIndex,
+    getByKey,
+    getByKeyRange,
+    getIndexByKey,
+    getIndexByKeyRange,
+} from "./binarySearch";
 import cmp from "./cmp";
 import { Key, Record } from "./types";
 
@@ -8,12 +14,10 @@ class RecordStore {
 
     public get(key: Key | FDBKeyRange) {
         if (key instanceof FDBKeyRange) {
-            return this.records.find(record => {
-                return key.includes(record.key);
-            });
+            return getByKeyRange(this.records, key);
         }
 
-        return binarySearchByKey(this.records, key);
+        return getByKey(this.records, key);
     }
 
     public add(newRecord: Record) {
@@ -22,11 +26,7 @@ class RecordStore {
         if (this.records.length === 0) {
             i = 0;
         } else {
-            i = this.records.findIndex(record => {
-                // cmp will only return 0 for an index. For an object store, any matching key has already been deleted,
-                // but we still need to look for cmp = 1 to find where to insert.
-                return cmp(record.key, newRecord.key) >= 0;
-            });
+            i = findIndex(this.records, newRecord.key);
 
             if (i === -1) {
                 // If no matching key, add to end
@@ -51,20 +51,19 @@ class RecordStore {
     }
 
     public delete(key: Key) {
-        const range = key instanceof FDBKeyRange ? key : FDBKeyRange.only(key);
-
         const deletedRecords: Record[] = [];
 
-        this.records = this.records.filter(record => {
-            const shouldDelete = range.includes(record.key);
-
-            if (shouldDelete) {
-                deletedRecords.push(record);
+        const isRange = key instanceof FDBKeyRange;
+        while (true) {
+            const idx = isRange
+                ? getIndexByKeyRange(this.records, key)
+                : getIndexByKey(this.records, key);
+            if (idx === -1) {
+                break;
             }
-
-            return !shouldDelete;
-        });
-
+            deletedRecords.push(this.records[idx]);
+            this.records.splice(idx, 1);
+        }
         return deletedRecords;
     }
 

@@ -1,3 +1,4 @@
+import FDBKeyRange from "../FDBKeyRange";
 import cmp from "./cmp";
 import { Key, Record } from "./types";
 
@@ -19,13 +20,70 @@ function binarySearch(records: Record[], key: Key) {
     return low;
 }
 
-// Assuming the array is properly ordered by key/value, do the equivalent
-// of `this.records.find(record => cmp(record.key, key) === 0)`
-// but using a fast binary search.
-export function binarySearchByKey(records: Record[], key: Key) {
+/**
+ * Equivalent to `records.findIndex(record => cmp(record.key, key) === 0)`
+ */
+export function getIndexByKey(records: Record[], key: Key): number {
     const idx = binarySearch(records, key);
     const record = records[idx];
     if (record && cmp(record.key, key) === 0) {
-        return record;
+        return idx;
     }
+    return -1;
+}
+
+/**
+ * Equivalent to `records.find(record => cmp(record.key, key) === 0)`
+ */
+export function getByKey(records: Record[], key: Key): Record | undefined {
+    const idx = getIndexByKey(records, key);
+    return records[idx];
+}
+
+/**
+ * Equivalent to `records.findIndex(record => key.includes(record.key))`
+ */
+export function getIndexByKeyRange(
+    records: Record[],
+    keyRange: FDBKeyRange,
+): number {
+    const lowerIdx =
+        typeof keyRange.lower === "undefined"
+            ? 0
+            : binarySearch(records, keyRange.lower);
+    const upperIdx =
+        typeof keyRange.upper === "undefined"
+            ? records.length - 1
+            : binarySearch(records, keyRange.upper);
+
+    for (let i = lowerIdx; i <= upperIdx; i++) {
+        const record = records[i];
+        if (keyRange.includes(record.key)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/**
+ * Equivalent to `records.find(record => key.includes(record.key))`
+ */
+export function getByKeyRange(
+    records: Record[],
+    keyRange: FDBKeyRange,
+): Record {
+    const idx = getIndexByKeyRange(records, keyRange);
+    return records[idx];
+}
+
+/**
+ * Equivalent to `records.findIndex(record => cmp(record.key, newRecord.key) >= 0)`
+ */
+export function findIndex(records: Record[], key: Key): number {
+    const idx = binarySearch(records, key);
+    const record = records[idx];
+    if (record && cmp(record.key, key) >= 0) {
+        return idx;
+    }
+    return -1;
 }
