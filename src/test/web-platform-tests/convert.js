@@ -79,6 +79,7 @@ const outFolder = path.posix.join(__dirname, "converted");
                     "/resources/testdriver-vendor.js",
                     "/common/get-host-info.sub.js",
                     "../common/get-host-info.sub.js",
+                    "/IndexedDB/idbindex_getAll.any.js",
                 ].includes(match[1])
             ) {
                 continue;
@@ -153,7 +154,10 @@ const outFolder = path.posix.join(__dirname, "converted");
 
         const importMatches = testScript
             .matchAll(/^\/\/\s*META:\s*script=(.+)$/gm)
-            .filter((match) => match[1] !== "/common/subset-tests.js");
+            .filter((match) => ![
+                "/common/subset-tests.js",
+                "/storage/buckets/resources/util.js",
+            ].includes(match[1]));
 
         for (const match of importMatches) {
             const location = path.posix.join(

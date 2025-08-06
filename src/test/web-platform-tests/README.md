@@ -1,4 +1,4 @@
-These tests come from [web-platform-tests](https://github.com/w3c/web-platform-tests/tree/master/IndexedDB), last copied in March 2023 from commit [`98afc8a86461237414d32da9e6628499c0a0022a`](https://github.com/web-platform-tests/wpt/commit/98afc8a86461237414d32da9e6628499c0a0022a).
+These tests come from [web-platform-tests](https://github.com/w3c/web-platform-tests/tree/master/IndexedDB), last copied in March 2024 from commit [`7b41322d9e9a323bb9c890747d28f93258cca889`](https://github.com/web-platform-tests/wpt/commit/7b41322d9e9a323bb9c890747d28f93258cca889).
 
 To update the tests, copy over the `IndexedDB` folder and remove `converted`:
 
