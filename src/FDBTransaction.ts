@@ -50,7 +50,7 @@ class FDBTransaction extends FakeEventTarget {
         );
     }
 
-    // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#dfn-steps-for-aborting-a-transaction
+    // https://www.w3.org/TR/IndexedDB/#abort-transaction
     public _abort(errName: string | null) {
         for (const f of this._rollbackLog.reverse()) {
             f();
@@ -91,11 +91,12 @@ class FDBTransaction extends FakeEventTarget {
         this._state = "finished";
     }
 
+    // https://www.w3.org/TR/IndexedDB/#dom-idbtransaction-abort
     public abort() {
         if (this._state === "committing" || this._state === "finished") {
             throw new InvalidStateError();
         }
-        this._state = "active";
+        this._state = "inactive";
 
         this._abort(null);
     }
