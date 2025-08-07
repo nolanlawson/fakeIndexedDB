@@ -114,7 +114,7 @@ const outFolder = path.posix.join(__dirname, "converted");
 
                     // this test has to be disabled because we can't detect Proxies vs non-Proxies in JS
                     .replaceAll(
-                        /invalid_key\('proxy of an array', new Proxy\(\[1,2,3], \{}\)\);/g,
+                        `invalid_key('proxy of an array', new Proxy([1, 2, 3], {}));`,
                         "",
                     )
             );
@@ -154,10 +154,13 @@ const outFolder = path.posix.join(__dirname, "converted");
 
         const importMatches = testScript
             .matchAll(/^\/\/\s*META:\s*script=(.+)$/gm)
-            .filter((match) => ![
-                "/common/subset-tests.js",
-                "/storage/buckets/resources/util.js",
-            ].includes(match[1]));
+            .filter(
+                (match) =>
+                    ![
+                        "/common/subset-tests.js",
+                        "/storage/buckets/resources/util.js",
+                    ].includes(match[1]),
+            );
 
         for (const match of importMatches) {
             const location = path.posix.join(
@@ -184,6 +187,12 @@ const outFolder = path.posix.join(__dirname, "converted");
                     .replaceAll(
                         / {2}cursor = txn2.objectStore\('objectStore'\)\.index\('index'\)\.openCursor\(IDBKeyRange\.bound\(0, 10\), "prev"\);/g,
                         addConst,
+                    )
+
+                    // this test has to be disabled because we can't detect Proxies vs non-Proxies in JS
+                    .replaceAll(
+                        `invalid_key('proxy of an array', new Proxy([1, 2, 3], {}));`,
+                        "",
                     )
             );
         });

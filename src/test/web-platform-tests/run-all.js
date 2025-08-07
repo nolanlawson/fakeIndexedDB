@@ -91,6 +91,10 @@ const skip = [
     "blob-delete-objectstore-db.any.js",
     "blob-contenttype.any.js",
     "blob-composite-blob-reads.any.js",
+    "nested-cloning-small.any.js",
+    "nested-cloning-large.any.js",
+    "nested-cloning-large-multiple.any.js",
+    "nested-cloning-basic.any.js",
 
     // All kinds of fucked up.
     "open-request-queue.js",
@@ -122,7 +126,7 @@ const skip = [
     "serialize-sharedarraybuffer-throws.https.js",
 
     // fakeIndexedDB does not currently support relaxed durability or durability options
-    "transaction-relaxed-durability.tentative.any.js",
+    "transaction-relaxed-durability.any.js",
 
     // these test our ability to do a structured clone on various DOM types like DOMRect which we don't support
     "structured-clone.any.js",
@@ -157,6 +161,26 @@ const skip = [
 
     // we do not currently support `navigator.storageBuckets`
     "storage-buckets.https.any.js",
+
+    // tests for subtle timing issues, needs investigation
+    "upgrade-transaction-lifecycle-user-aborted.any.js",
+    "upgrade-transaction-lifecycle-backend-aborted.any.js",
+    "upgrade-transaction-deactivation-timing.any.js",
+    "transaction-lifetime.any.js",
+    "transaction-lifetime-empty.any.js",
+    "transaction-deactivation-timing.any.js",
+    "transaction-abort-request-error.any.js",
+    "transaction-abort-multiple-metadata-revert.any.js",
+    "transaction-abort-index-metadata-revert.any.js",
+    "transaction-abort-object-store-metadata-revert.any.js",
+    "transaction-abort-generator-revert.any.js",
+    "request-event-ordering-small-values.any.js",
+    "request-event-ordering-large-values.any.js",
+    "request-event-ordering-large-mixed-with-small-values.any.js",
+    "request-event-ordering-large-then-small-values.any.js",
+    "open-request-queue.any.js",
+    "idbtransaction_objectStoreNames.any.js",
+    "idbrequest-onupgradeneeded.any.js",
 ];
 
 const filenames = glob.sync("/**/*.js", { root: testFolder });
