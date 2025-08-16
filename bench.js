@@ -26,7 +26,7 @@ async function main() {
     for (let i = 0; i < NUM_RECORDS; i++) {
       store.put({
         a: i,
-        b: Array(100).fill().map((_, i) => i),
+        b: Array(100).fill().map((_, i) => i % 20),
       })
     }
   })
