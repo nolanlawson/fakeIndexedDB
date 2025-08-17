@@ -196,25 +196,6 @@ export default class RedBlackBST {
         return h;
     }
 
-    /**
-     * Removes the smallest key and associated value from the symbol table.
-     */
-    public deleteMin(): void {
-        if (!this._root) {
-            throw new Error("Cannot call deleteMin() on an empty table");
-        }
-
-        // if both children of root are black, set root to red
-        if (!hasRedLeft(this._root) && !hasRedRight(this._root)) {
-            this._root.color = RED;
-        }
-
-        this._root = this._deleteMin(this._root);
-        if (this._root) {
-            this._root.color = BLACK;
-        }
-    }
-
     // delete the key-value pair with the minimum key rooted at h
     private _deleteMin(h: Node): Node | undefined {
         if (!h.left) {
@@ -227,25 +208,6 @@ export default class RedBlackBST {
 
         h.left = this._deleteMin((h as NodeWithLeft).left);
         return balance(h);
-    }
-
-    /**
-     * Removes the largest key and associated value from the symbol table.
-     */
-    public deleteMax(): void {
-        if (!this._root) {
-            throw new Error("Cannot call deleteMin() on an empty table");
-        }
-
-        // if both children of root are black, set root to red
-        if (!hasRedLeft(this._root) && !hasRedRight(this._root)) {
-            this._root.color = RED;
-        }
-
-        this._root = this._deleteMax(this._root);
-        if (this._root) {
-            this._root.color = BLACK;
-        }
     }
 
     // delete the key-value pair with the maximum key rooted at h
@@ -331,17 +293,6 @@ export default class RedBlackBST {
      *  Ordered symbol table methods.
      ***************************************************************************/
 
-    /**
-     * Returns the smallest key in the symbol table.
-     * @return the smallest key in the symbol table
-     */
-    min(): Record {
-        if (!this._root) {
-            throw new Error("Cannot call min() on an empty table");
-        }
-        return this._min(this._root).record;
-    }
-
     // the smallest key in subtree rooted at x; null if no such key
     private _min(x: Node): Node {
         if (!x.left) {
@@ -349,17 +300,6 @@ export default class RedBlackBST {
         } else {
             return this._min(x.left);
         }
-    }
-
-    /**
-     * Returns the largest key in the symbol table.
-     * @return the largest key in the symbol table
-     */
-    max(): Record {
-        if (!this._root) {
-            throw new Error("Cannot call max() on an empty table");
-        }
-        return this._max(this._root).record;
     }
 
     // the largest key in the subtree rooted at x; null if no such key
