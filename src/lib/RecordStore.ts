@@ -6,8 +6,8 @@ import RedBlackTree from "./redBlackTree.js";
 class RecordStore {
     private records: RedBlackTree;
 
-    constructor(ignoreValuesForComparison: boolean) {
-        this.records = new RedBlackTree(ignoreValuesForComparison);
+    constructor(keysAreUnique: boolean) {
+        this.records = new RedBlackTree(keysAreUnique);
     }
 
     public get(key: Key | FDBKeyRange) {

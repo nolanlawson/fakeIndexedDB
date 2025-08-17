@@ -5,20 +5,12 @@ import FDBKeyRange from "../FDBKeyRange.js";
 const RED = true;
 const BLACK = false;
 
-class Node {
+interface Node {
     record: Record;
     color: boolean;
     size: number;
     left: Node | undefined;
     right: Node | undefined;
-
-    constructor(record: Record, color: boolean, size: number) {
-        this.record = record;
-        this.color = color;
-        this.size = size;
-        this.left = undefined;
-        this.right = undefined;
-    }
 }
 
 type RedNode = Node & { color: typeof RED };
@@ -128,24 +120,16 @@ const balance = (h: Node): Node => {
  */
 export default class RedBlackTree {
     private _root: Node | undefined;
-    private readonly _ignoreValuesForComparison: boolean;
+    private readonly _keysAreUnique: boolean;
 
     /**
      *
-     * @param ignoreValuesForComparison - whether to use the `record.value` when comparing. This is basically
-     * used to distinguish ObjectStores (where the value is the entire object, not used as a key) from Indexes
-     * (where both the key and the value are meaningful Keys used for sorting)
+     * @param keysAreUnique - whether keys can be unique, and thus whether we cn skip checking `record.value` when
+     * comparing. This is basically used to distinguish ObjectStores (where the value is the entire object, not used
+     * as a key) from non-unique Indexes (where both the key and the value are meaningful keys used for sorting)
      */
-    constructor(ignoreValuesForComparison?: boolean) {
-        this._ignoreValuesForComparison = !!ignoreValuesForComparison;
-    }
-
-    private _compare(a: Record, b: Record): number {
-        const keyComparison = cmp(a.key, b.key);
-        if (keyComparison !== 0) {
-            return keyComparison;
-        }
-        return this._ignoreValuesForComparison ? 0 : cmp(a.value, b.value);
+    constructor(keysAreUnique?: boolean) {
+        this._keysAreUnique = !!keysAreUnique;
     }
 
     size(): number {
@@ -156,6 +140,20 @@ export default class RedBlackTree {
         return this._getByComparator(this._root, (otherRecord) =>
             this._compare(record, otherRecord),
         );
+    }
+
+    contains(record: Record): boolean {
+        return !!this.get(record);
+    }
+
+    private _compare(a: Record, b: Record): number {
+        const keyComparison = cmp(a.key, b.key);
+        if (keyComparison !== 0) {
+            return keyComparison;
+        }
+        // if keys are unique, then we can (and must) avoid comparing the values, since they may be non-comparable
+        // (e.g. in the case of an ObjectStore)
+        return this._keysAreUnique ? 0 : cmp(a.value, b.value);
     }
 
     // value associated with the given key in subtree rooted at x; null if no such key
@@ -176,10 +174,6 @@ export default class RedBlackTree {
         return undefined;
     }
 
-    contains(record: Record): boolean {
-        return !!this.get(record);
-    }
-
     put(record: Record): void {
         this._root = this._put(this._root, record);
         this._root.color = BLACK;
@@ -187,7 +181,13 @@ export default class RedBlackTree {
 
     private _put(h: Node | undefined, record: Record): Node {
         if (!h) {
-            return new Node(record, RED, 1);
+            return {
+                record,
+                color: RED,
+                size: 1,
+                left: undefined,
+                right: undefined,
+            };
         }
 
         const comparison = this._compare(record, h.record);
@@ -200,18 +200,7 @@ export default class RedBlackTree {
         }
 
         // fix-up any right-leaning links
-        if (hasRedRight(h) && !hasRedLeft(h)) {
-            h = rotateLeft(h);
-        }
-        if (hasRedLeft(h) && hasRedLeft(h.left)) {
-            h = rotateRight(h);
-        }
-        if (hasRedLeft(h) && hasRedRight(h)) {
-            flipColors(h);
-        }
-        h.size = size(h.left) + size(h.right) + 1;
-
-        return h;
+        return balance(h);
     }
 
     // delete the key-value pair with the minimum key rooted at h
@@ -225,25 +214,6 @@ export default class RedBlackTree {
         }
 
         h.left = this._deleteMin((h as NodeWithLeft).left);
-        return balance(h);
-    }
-
-    // delete the key-value pair with the maximum key rooted at h
-    private _deleteMax(h: Node): Node | undefined {
-        if (hasRedLeft(h)) {
-            h = rotateRight(h);
-        }
-
-        if (!h.right) {
-            return undefined;
-        }
-
-        if (!hasRedRight(h) && !hasRedLeft(h.right)) {
-            h = moveRedRight(h as NodeWithBoth);
-        }
-
-        h.right = this._deleteMax((h as NodeWithRight).right);
-
         return balance(h);
     }
 
@@ -291,26 +261,6 @@ export default class RedBlackTree {
         return balance(h);
     }
 
-    /***************************************************************************
-     *  Utility functions.
-     ***************************************************************************/
-
-    /**
-     * Returns the height of the BST (for debugging).
-     * @return the height of the BST (a 1-node tree has height 0)
-     */
-    // public int height() {
-    //     return height(root);
-    // }
-    // private int height(Node x) {
-    //     if (x == null) return -1;
-    //     return 1 + Math.max(height(x.left), height(x.right));
-    // }
-
-    /***************************************************************************
-     *  Ordered symbol table methods.
-     ***************************************************************************/
-
     // the smallest key in subtree rooted at x; null if no such key
     private _min(x: Node): Node {
         if (!x.left) {
@@ -320,19 +270,7 @@ export default class RedBlackTree {
         }
     }
 
-    // the largest key in the subtree rooted at x; null if no such key
-    private _max(x: Node): Node {
-        if (!x.right) {
-            return x;
-        } else {
-            return this._max(x.right);
-        }
-    }
-
     getAllRecords(): Record[] {
-        if (!this._root) {
-            return [];
-        }
         return this.getRecords(
             new FDBKeyRange(undefined, undefined, false, false),
         );
@@ -359,8 +297,8 @@ export default class RedBlackTree {
         const cmpLo = lower === undefined ? -1 : cmp(lower, x.record.key);
         const cmpHi = upper === undefined ? 1 : cmp(upper, x.record.key);
 
-        // If the values are meaningful then we could have duplicate keys so need to go left on equality
-        const goLeft = this._ignoreValuesForComparison ? cmpLo < 0 : cmpLo <= 0;
+        // If the keys are non-unique then we could have duplicate keys so need to go left even on equality
+        const goLeft = this._keysAreUnique ? cmpLo < 0 : cmpLo <= 0;
         if (goLeft) {
             this._getRecords(x.left, queue, keyRange);
         }
@@ -373,122 +311,10 @@ export default class RedBlackTree {
             queue.push(x.record);
         }
 
-        // If the values are meaningful then we could have duplicate keys so need to go right on equality
-        const goRight = this._ignoreValuesForComparison
-            ? cmpHi > 0
-            : cmpHi >= 0;
+        // If the keys are non-unique then we could have duplicate keys so need to go right even on equality
+        const goRight = this._keysAreUnique ? cmpHi > 0 : cmpHi >= 0;
         if (goRight) {
             this._getRecords(x.right, queue, keyRange);
         }
     }
-
-    // /**
-    //  * Returns the number of keys in the symbol table in the given range.
-    //  *
-    //  * @param  lo minimum endpoint
-    //  * @param  hi maximum endpoint
-    //  * @return the number of keys in the symbol table between {@code lo}
-    //  *    (inclusive) and {@code hi} (inclusive)
-    //  * @throws IllegalArgumentException if either {@code lo} or {@code hi}
-    //  *    is {@code null}
-    //  */
-    // public int size(Key lo, Key hi) {
-    //     if (lo == null) throw new IllegalArgumentException("first argument to size() is null");
-    //     if (hi == null) throw new IllegalArgumentException("second argument to size() is null");
-    //
-    //     if (lo.compareTo(hi) > 0) return 0;
-    //     if (contains(hi)) return rank(hi) - rank(lo) + 1;
-    //     else              return rank(hi) - rank(lo);
-    // }
-
-    /***************************************************************************
-     *  Check integrity of red-black tree data structure.
-     ***************************************************************************/
-    // private boolean check() {
-    //     if (!isBST())            StdOut.println("Not in symmetric order");
-    //     if (!isSizeConsistent()) StdOut.println("Subtree counts not consistent");
-    //     if (!isRankConsistent()) StdOut.println("Ranks not consistent");
-    //     if (!is23())             StdOut.println("Not a 2-3 tree");
-    //     if (!isBalanced())       StdOut.println("Not balanced");
-    //     return isBST() && isSizeConsistent() && isRankConsistent() && is23() && isBalanced();
-    // }
-    //
-    // // does this binary tree satisfy symmetric order?
-    // // Note: this test also ensures that data structure is a binary tree since order is strict
-    // private boolean isBST() {
-    //     return isBST(root, null, null);
-    // }
-    //
-    // // is the tree rooted at x a BST with all keys strictly between min and max
-    // // (if min or max is null, treat as empty constraint)
-    // // Credit: elegant solution due to Bob Dondero
-    // private boolean isBST(Node x, Key min, Key max) {
-    //     if (x == null) return true;
-    //     if (min != null && x.key.compareTo(min) <= 0) return false;
-    //     if (max != null && x.key.compareTo(max) >= 0) return false;
-    //     return isBST(x.left, min, x.key) && isBST(x.right, x.key, max);
-    // }
-    //
-    // // are the size fields correct?
-    // private boolean isSizeConsistent() { return isSizeConsistent(root); }
-    // private boolean isSizeConsistent(Node x) {
-    //     if (x == null) return true;
-    //     if (x.size != size(x.left) + size(x.right) + 1) return false;
-    //     return isSizeConsistent(x.left) && isSizeConsistent(x.right);
-    // }
-    //
-    // // check that ranks are consistent
-    // private boolean isRankConsistent() {
-    //     for (int i = 0; i < size(); i++)
-    //     if (i != rank(select(i))) return false;
-    //     for (Key key : keys())
-    //     if (key.compareTo(select(rank(key))) != 0) return false;
-    //     return true;
-    // }
-    //
-    // // Does the tree have no red right links, and at most one (left)
-    // // red links in a row on any path?
-    // private boolean is23() { return is23(root); }
-    // private boolean is23(Node x) {
-    //     if (x == null) return true;
-    //     if (isRed(x.right)) return false;
-    //     if (x != root && isRed(x) && isRed(x.left))
-    //         return false;
-    //     return is23(x.left) && is23(x.right);
-    // }
-    //
-    // // do all paths from root to leaf have same number of black edges?
-    // private boolean isBalanced() {
-    //     int black = 0;     // number of black links on path from root to min
-    //     Node x = root;
-    //     while (x != null) {
-    //         if (!isRed(x)) black++;
-    //         x = x.left;
-    //     }
-    //     return isBalanced(root, black);
-    // }
-    //
-    // // does every path from the root to a leaf have the given number of black links?
-    // private boolean isBalanced(Node x, int black) {
-    //     if (x == null) return black == 0;
-    //     if (!isRed(x)) black--;
-    //     return isBalanced(x.left, black) && isBalanced(x.right, black);
-    // }
-
-    // /**
-    //  * Unit tests the {@code RedBlackBST} data type.
-    //  *
-    //  * @param args the command-line arguments
-    //  */
-    // public static void main(String[] args) {
-    //     RedBlackBST<String, Integer> st = new RedBlackBST<String, Integer>();
-    //     for (int i = 0; !StdIn.isEmpty(); i++) {
-    //         String key = StdIn.readString();
-    //         st.put(key, i);
-    //     }
-    //     StdOut.println();
-    //     for (String s : st.keys())
-    //     StdOut.println(s + " " + st.get(s));
-    //     StdOut.println();
-    // }
 }
