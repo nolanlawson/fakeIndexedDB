@@ -28,14 +28,6 @@ type NodeWithBoth = NodeWithLeft & NodeWithRight;
 
 type Comparator = (record: Record) => number;
 
-const compare = (a: Record, b: Record): number => {
-    const keyComparison = cmp(a.key, b.key);
-    if (keyComparison !== 0) {
-        return keyComparison;
-    }
-    return cmp(a.value, b.value);
-};
-
 const isRed = (x: Node | undefined): x is RedNode => {
     return x ? x.color === RED : false;
 };
@@ -137,6 +129,25 @@ const balance = (h: Node): Node => {
  */
 export default class RedBlackTree {
     private _root: Node | undefined;
+    private readonly _ignoreValuesForComparison: boolean;
+
+    /**
+     *
+     * @param ignoreValuesForComparison - whether to use the `record.value` when comparing. This is basically
+     * used to distinguish ObjectStores (where the value is the entire object, not used as a key) from Indexes
+     * (where both the key and the value are meaningful Keys used for sorting)
+     */
+    constructor(ignoreValuesForComparison?: boolean) {
+        this._ignoreValuesForComparison = !!ignoreValuesForComparison;
+    }
+
+    private _compare(a: Record, b: Record): number {
+        const keyComparison = cmp(a.key, b.key);
+        if (keyComparison !== 0) {
+            return keyComparison;
+        }
+        return this._ignoreValuesForComparison ? 0 : cmp(a.value, b.value);
+    }
 
     size(): number {
         return size(this._root);
@@ -144,7 +155,7 @@ export default class RedBlackTree {
 
     get(record: Record): Record | undefined {
         return this._getByComparator(this._root, (otherRecord) =>
-            compare(record, otherRecord),
+            this._compare(record, otherRecord),
         );
     }
 
@@ -186,7 +197,7 @@ export default class RedBlackTree {
             return new Node(record, RED, 1);
         }
 
-        const comparison = compare(record, h.record);
+        const comparison = this._compare(record, h.record);
         if (comparison < 0) {
             h.left = this._put(h.left, record);
         } else if (comparison > 0) {
@@ -261,7 +272,7 @@ export default class RedBlackTree {
 
     // delete the key-value pair with the given key rooted at h
     _delete(h: Node, record: Record): Node | undefined {
-        if (compare(record, h.record) < 0) {
+        if (this._compare(record, h.record) < 0) {
             if (!hasRedLeft(h) && !hasRedLeft((h as NodeWithLeft).left)) {
                 h = moveRedLeft(h as NodeWithBoth);
             }
@@ -270,13 +281,13 @@ export default class RedBlackTree {
             if (hasRedLeft(h)) {
                 h = rotateRight(h);
             }
-            if (compare(record, h.record) == 0 && !h.right) {
+            if (this._compare(record, h.record) == 0 && !h.right) {
                 return undefined;
             }
             if (!hasRedRight(h) && !hasRedLeft((h as NodeWithRight).right)) {
                 h = moveRedRight(h as NodeWithBoth);
             }
-            if (compare(record, h.record) == 0) {
+            if (this._compare(record, h.record) == 0) {
                 const x = this._min((h as NodeWithRight).right);
                 h.record = x.record;
                 h.right = this._deleteMin((h as NodeWithRight).right);
@@ -350,27 +361,30 @@ export default class RedBlackTree {
         if (!x) {
             return;
         }
-        const cmpLo =
-            keyRange.lower === undefined
-                ? -1
-                : cmp(keyRange.lower, x.record.key);
-        const cmpHi =
-            keyRange.upper === undefined
-                ? 1
-                : cmp(keyRange.upper, x.record.key);
+        const { lower, upper, lowerOpen, upperOpen } = keyRange;
 
-        if (cmpLo < 0) {
+        const cmpLo = lower === undefined ? -1 : cmp(lower, x.record.key);
+        const cmpHi = upper === undefined ? 1 : cmp(upper, x.record.key);
+
+        // If the values are meaningful then we could have duplicate keys so need to go left on equality
+        const goLeft = this._ignoreValuesForComparison ? cmpLo < 0 : cmpLo <= 0;
+        if (goLeft) {
             this._getRecords(x.left, queue, keyRange);
         }
-        if (cmpLo <= 0 && cmpHi >= 0) {
-            if (
-                !(keyRange.lowerOpen && cmpLo === 0) &&
-                !(keyRange.upperOpen && cmpHi === 0)
-            ) {
-                queue.push(x.record);
-            }
+
+        const shouldPush =
+            (lowerOpen ? cmpLo < 0 : cmpLo <= 0) &&
+            (upperOpen ? cmpHi > 0 : cmpHi >= 0);
+        if (shouldPush) {
+            // don't add records if it's an exact match and lowerOpen/upperOpen tells us to skip exact matches
+            queue.push(x.record);
         }
-        if (cmpHi > 0) {
+
+        // If the values are meaningful then we could have duplicate keys so need to go right on equality
+        const goRight = this._ignoreValuesForComparison
+            ? cmpHi > 0
+            : cmpHi >= 0;
+        if (goRight) {
             this._getRecords(x.right, queue, keyRange);
         }
     }

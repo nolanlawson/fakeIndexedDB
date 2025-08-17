@@ -1,158 +1,75 @@
 import FDBKeyRange from "../FDBKeyRange.js";
-import {
-    binarySearchByKeyAndValue,
-    getByKey,
-    getByKeyRange,
-    getIndexByKey,
-    getIndexByKeyRange,
-} from "./binarySearch.js";
 import cmp from "./cmp.js";
 import { FDBCursorDirection, Key, Record } from "./types.js";
+import RedBlackTree from "./redBlackTree.js";
 
 class RecordStore {
-    private records: Record[] = [];
+    private records: RedBlackTree;
+
+    constructor(ignoreValuesForComparison: boolean) {
+        this.records = new RedBlackTree(ignoreValuesForComparison);
+    }
 
     public get(key: Key | FDBKeyRange) {
         if (key instanceof FDBKeyRange) {
-            return getByKeyRange(this.records, key);
+            return this.records.getRecords(key)[0];
         }
 
-        return getByKey(this.records, key);
+        return this.records.getByKey(key);
     }
 
     public add(newRecord: Record) {
-        // Find where to put it so it's sorted by key
-        let i;
-        if (this.records.length === 0) {
-            i = 0;
-        } else {
-            i = binarySearchByKeyAndValue(this.records, newRecord);
-        }
-
-        this.records.splice(i, 0, newRecord);
+        this.records.put(newRecord);
     }
 
     public delete(key: Key) {
-        const deletedRecords: Record[] = [];
+        const range = key instanceof FDBKeyRange ? key : FDBKeyRange.only(key);
 
-        const isRange = key instanceof FDBKeyRange;
-        while (true) {
-            const idx = isRange
-                ? getIndexByKeyRange(this.records, key)
-                : getIndexByKey(this.records, key);
-            if (idx === -1) {
-                break;
-            }
-            deletedRecords.push(this.records[idx]);
-            this.records.splice(idx, 1);
+        const deletedRecords = this.records.getRecords(range);
+
+        for (const record of deletedRecords) {
+            this.records.delete(record);
         }
+
         return deletedRecords;
     }
 
     public deleteByValue(key: Key) {
         const range = key instanceof FDBKeyRange ? key : FDBKeyRange.only(key);
 
-        const deletedRecords: Record[] = [];
-
-        this.records = this.records.filter((record) => {
-            const shouldDelete = range.includes(record.value);
-
-            if (shouldDelete) {
-                deletedRecords.push(record);
-            }
-
-            return !shouldDelete;
-        });
+        const deletedRecords: Record[] = this.records
+            .getAllRecords()
+            .filter((record) => {
+                return range.includes(record.value);
+            });
 
         return deletedRecords;
     }
 
     public clear() {
-        const deletedRecords = this.records.slice();
-        this.records = [];
+        const deletedRecords = this.records.getAllRecords();
+        this.records = new RedBlackTree();
         return deletedRecords;
     }
 
     public values(range?: FDBKeyRange, direction: FDBCursorDirection = "next") {
+        const records = range
+            ? this.records.getRecords(range)
+            : this.records.getAllRecords();
+
+        if (direction === "prev" || direction === "prevunique") {
+            records.reverse();
+        }
+
         return {
             [Symbol.iterator]: () => {
-                let i: number;
-                if (direction === "next" || direction === "nextunique") {
-                    i = 0;
-                    if (range !== undefined && range.lower !== undefined) {
-                        while (this.records[i] !== undefined) {
-                            const cmpResult = cmp(
-                                this.records[i].key,
-                                range.lower,
-                            );
-                            if (
-                                cmpResult === 1 ||
-                                (cmpResult === 0 && !range.lowerOpen)
-                            ) {
-                                break;
-                            }
-                            i += 1;
-                        }
-                    }
-                } else {
-                    i = this.records.length - 1;
-                    if (range !== undefined && range.upper !== undefined) {
-                        while (this.records[i] !== undefined) {
-                            const cmpResult = cmp(
-                                this.records[i].key,
-                                range.upper,
-                            );
-                            if (
-                                cmpResult === -1 ||
-                                (cmpResult === 0 && !range.upperOpen)
-                            ) {
-                                break;
-                            }
-                            i -= 1;
-                        }
-                    }
-                }
+                let i = 0;
 
                 const next = () => {
-                    let done;
-                    let value;
-                    if (direction === "next" || direction === "nextunique") {
-                        value = this.records[i];
-                        done = i >= this.records.length;
-                        i += 1;
+                    const done = i >= records.length;
+                    const value = done ? undefined : records[i];
 
-                        if (
-                            !done &&
-                            range !== undefined &&
-                            range.upper !== undefined
-                        ) {
-                            const cmpResult = cmp(value.key, range.upper);
-                            done =
-                                cmpResult === 1 ||
-                                (cmpResult === 0 && range.upperOpen);
-                            if (done) {
-                                value = undefined;
-                            }
-                        }
-                    } else {
-                        value = this.records[i];
-                        done = i < 0;
-                        i -= 1;
-
-                        if (
-                            !done &&
-                            range !== undefined &&
-                            range.lower !== undefined
-                        ) {
-                            const cmpResult = cmp(value.key, range.lower);
-                            done =
-                                cmpResult === -1 ||
-                                (cmpResult === 0 && range.lowerOpen);
-                            if (done) {
-                                value = undefined;
-                            }
-                        }
-                    }
+                    i++;
 
                     // The weird "as IteratorResult<Record>" is needed because of
                     // https://github.com/Microsoft/TypeScript/issues/11375 and

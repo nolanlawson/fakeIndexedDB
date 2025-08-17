@@ -15,7 +15,7 @@ class Index {
     // constraint
     public initialized = false;
     public readonly rawObjectStore: ObjectStore;
-    public readonly records = new RecordStore();
+    public readonly records = new RecordStore(false);
     public name: string;
     public readonly keyPath: KeyPath;
     public multiEntry: boolean;
