@@ -1,4 +1,4 @@
-import { Key, Record } from "./types.js";
+import { Record } from "./types.js";
 import cmp from "./cmp.js";
 import FDBKeyRange from "../FDBKeyRange.js";
 
@@ -25,7 +25,6 @@ type RedNode = Node & { color: typeof RED };
 type NodeWithLeft = Node & { left: Node };
 type NodeWithRight = Node & { right: Node };
 type NodeWithBoth = NodeWithLeft & NodeWithRight;
-
 type Comparator = (record: Record) => number;
 
 const isRed = (x: Node | undefined): x is RedNode => {
