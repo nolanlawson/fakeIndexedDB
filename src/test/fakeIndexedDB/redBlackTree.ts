@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import RedBlackTree from "../../lib/redBlackTree.js";
+import FDBKeyRange from "../../FDBKeyRange.js";
 
 describe("redBlackTree", () => {
     it("works for basic insertion and retrieval", () => {
@@ -107,7 +108,7 @@ describe("redBlackTree", () => {
 
         // in bounds
         assert.deepStrictEqual(
-            tree.getRecords({ key: "b", value: "b" }, { key: "d", value: "d" }),
+            tree.getRecords(new FDBKeyRange("b", "d", false, false)),
             [
                 { key: "b", value: "b" },
                 { key: "c", value: "c" },
@@ -117,13 +118,37 @@ describe("redBlackTree", () => {
 
         // out of bounds
         assert.deepStrictEqual(
-            tree.getRecords({ key: "0", value: "0" }, { key: "z", value: "z" }),
+            tree.getRecords(new FDBKeyRange("0", "z", false, false)),
             [
                 { key: "a", value: "a" },
                 { key: "b", value: "b" },
                 { key: "c", value: "c" },
                 { key: "d", value: "d" },
                 { key: "e", value: "e" },
+            ],
+        );
+
+        // lower/upper open
+        assert.deepStrictEqual(
+            tree.getRecords(new FDBKeyRange("b", "d", true, true)),
+            [{ key: "c", value: "c" }],
+        );
+
+        // lower open only
+        assert.deepStrictEqual(
+            tree.getRecords(new FDBKeyRange("b", "d", true, false)),
+            [
+                { key: "c", value: "c" },
+                { key: "d", value: "d" },
+            ],
+        );
+
+        // upper open only
+        assert.deepStrictEqual(
+            tree.getRecords(new FDBKeyRange("b", "d", false, true)),
+            [
+                { key: "b", value: "b" },
+                { key: "c", value: "c" },
             ],
         );
     });

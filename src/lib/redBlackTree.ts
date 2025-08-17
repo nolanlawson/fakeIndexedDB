@@ -1,6 +1,6 @@
 import { Key, Record } from "./types.js";
 import cmp from "./cmp.js";
-import FDBKeyRange from "../FDBKeyRange";
+import FDBKeyRange from "../FDBKeyRange.js";
 
 const RED = true;
 const BLACK = false;
@@ -325,140 +325,18 @@ export default class RedBlackTree {
         }
     }
 
-    // /**
-    //  * Returns the largest key in the symbol table less than or equal to {@code key}.
-    //  * @param key the key
-    //  * @return the largest key in the symbol table less than or equal to {@code key}
-    //  * @throws NoSuchElementException if there is no such key
-    //  * @throws IllegalArgumentException if {@code key} is {@code null}
-    //  */
-    // public Key floor(Key key) {
-    //     if (key == null) throw new IllegalArgumentException("argument to floor() is null");
-    //     if (isEmpty()) throw new NoSuchElementException("calls floor() with empty symbol table");
-    //     Node x = floor(root, key);
-    //     if (x == null) throw new NoSuchElementException("argument to floor() is too small");
-    //     else           return x.key;
-    // }
-    //
-    // // the largest key in the subtree rooted at x less than or equal to the given key
-    // private Node floor(Node x, Key key) {
-    //     if (x == null) return null;
-    //     int cmp = key.compareTo(x.key);
-    //     if (cmp == 0) return x;
-    //     if (cmp < 0)  return floor(x.left, key);
-    //     Node t = floor(x.right, key);
-    //     if (t != null) return t;
-    //     else           return x;
-    // }
-    //
-    // /**
-    //  * Returns the smallest key in the symbol table greater than or equal to {@code key}.
-    //  * @param key the key
-    //  * @return the smallest key in the symbol table greater than or equal to {@code key}
-    //  * @throws NoSuchElementException if there is no such key
-    //  * @throws IllegalArgumentException if {@code key} is {@code null}
-    //  */
-    // public Key ceiling(Key key) {
-    //     if (key == null) throw new IllegalArgumentException("argument to ceiling() is null");
-    //     if (isEmpty()) throw new NoSuchElementException("calls ceiling() with empty symbol table");
-    //     Node x = ceiling(root, key);
-    //     if (x == null) throw new NoSuchElementException("argument to ceiling() is too large");
-    //     else           return x.key;
-    // }
-    //
-    // // the smallest key in the subtree rooted at x greater than or equal to the given key
-    // private Node ceiling(Node x, Key key) {
-    //     if (x == null) return null;
-    //     int cmp = key.compareTo(x.key);
-    //     if (cmp == 0) return x;
-    //     if (cmp > 0)  return ceiling(x.right, key);
-    //     Node t = ceiling(x.left, key);
-    //     if (t != null) return t;
-    //     else           return x;
-    // }
-
-    // /**
-    //  * Return the key in the symbol table of a given {@code rank}.
-    //  * This key has the property that there are {@code rank} keys in
-    //  * the symbol table that are smaller. In other words, this key is the
-    //  * ({@code rank}+1)st smallest key in the symbol table.
-    //  *
-    //  * @param  rank the order statistic
-    //  * @return the key in the symbol table of given {@code rank}
-    //  * @throws IllegalArgumentException unless {@code rank} is between 0 and
-    //  *        <em>n</em>–1
-    //  */
-    // public Key select(int rank) {
-    //     if (rank < 0 || rank >= size()) {
-    //         throw new IllegalArgumentException("argument to select() is invalid: " + rank);
-    //     }
-    //     return select(root, rank);
-    // }
-    //
-    // // Return key in BST rooted at x of given rank.
-    // // Precondition: rank is in legal range.
-    // private Key select(Node x, int rank) {
-    //     if (x == null) return null;
-    //     int leftSize = size(x.left);
-    //     if      (leftSize > rank) return select(x.left,  rank);
-    //     else if (leftSize < rank) return select(x.right, rank - leftSize - 1);
-    //     else                      return x.key;
-    // }
-    //
-    // /**
-    //  * Return the number of keys in the symbol table strictly less than {@code key}.
-    //  * @param key the key
-    //  * @return the number of keys in the symbol table strictly less than {@code key}
-    //  * @throws IllegalArgumentException if {@code key} is {@code null}
-    //  */
-    // public int rank(Key key) {
-    //     if (key == null) throw new IllegalArgumentException("argument to rank() is null");
-    //     return rank(key, root);
-    // }
-    //
-    // // number of keys less than key in the subtree rooted at x
-    // private int rank(Key key, Node x) {
-    //     if (x == null) return 0;
-    //     int cmp = key.compareTo(x.key);
-    //     if      (cmp < 0) return rank(key, x.left);
-    //     else if (cmp > 0) return 1 + size(x.left) + rank(key, x.right);
-    //     else              return size(x.left);
-    // }
-
-    /***************************************************************************
-     *  Range count and range search.
-     ***************************************************************************/
-
-    /**
-     * Returns all keys in the symbol table in ascending order as an {@code Iterable}.
-     * To iterate over all of the keys in the symbol table named {@code st},
-     * use the foreach notation: {@code for (Key key : st.keys())}.
-     * @return all keys in the symbol table in ascending order
-     */
     getAllRecords(): Record[] {
         if (!this._root) {
             return [];
         }
         return this.getRecords(
-            this._min(this._root).record,
-            this._max(this._root).record,
+            new FDBKeyRange(undefined, undefined, false, false),
         );
     }
 
-    /**
-     * Returns all keys in the symbol table in the given range in ascending order,
-     * as an {@code Iterable}.
-     *
-     * @param  lo minimum endpoint
-     * @param  hi maximum endpoint
-     * @return all keys in the symbol table between {@code lo}
-     *    (inclusive) and {@code hi} (inclusive) in ascending order
-     * @throws IllegalArgumentException if either {@code lo} or {@code hi}
-     *    is {@code null}
-     */
-    getRecords(lo: Record, hi: Record): Record[] {
+    getRecords(keyRange: FDBKeyRange): Record[] {
         const queue: Record[] = [];
-        this._getRecords(this._root, queue, lo, hi);
+        this._getRecords(this._root, queue, keyRange);
         return queue;
     }
 
@@ -467,23 +345,33 @@ export default class RedBlackTree {
     private _getRecords(
         x: Node | undefined,
         queue: Record[],
-        lo: Record,
-        hi: Record,
+        keyRange: FDBKeyRange,
     ) {
         if (!x) {
             return;
         }
-        const cmpLo = compare(lo, x.record);
-        const cmpHi = compare(hi, x.record);
+        const cmpLo =
+            keyRange.lower === undefined
+                ? -1
+                : cmp(keyRange.lower, x.record.key);
+        const cmpHi =
+            keyRange.upper === undefined
+                ? 1
+                : cmp(keyRange.upper, x.record.key);
 
         if (cmpLo < 0) {
-            this._getRecords(x.left, queue, lo, hi);
+            this._getRecords(x.left, queue, keyRange);
         }
         if (cmpLo <= 0 && cmpHi >= 0) {
-            queue.push(x.record);
+            if (
+                !(keyRange.lowerOpen && cmpLo === 0) &&
+                !(keyRange.upperOpen && cmpHi === 0)
+            ) {
+                queue.push(x.record);
+            }
         }
         if (cmpHi > 0) {
-            this._getRecords(x.right, queue, lo, hi);
+            this._getRecords(x.right, queue, keyRange);
         }
     }
 
