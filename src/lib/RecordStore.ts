@@ -11,18 +11,15 @@ class RecordStore {
     }
 
     public get(key: Key | FDBKeyRange) {
-        if (key instanceof FDBKeyRange) {
-            return this.records.getRecords(key)[0];
-        }
-
-        return this.records.getByKey(key);
+        const range = key instanceof FDBKeyRange ? key : FDBKeyRange.only(key);
+        return this.records.getRecords(range)[0];
     }
 
     public add(newRecord: Record) {
         this.records.put(newRecord);
     }
 
-    public delete(key: Key) {
+    public delete(key: Key | FDBKeyRange) {
         const range = key instanceof FDBKeyRange ? key : FDBKeyRange.only(key);
 
         const deletedRecords = this.records.getRecords(range);
@@ -34,7 +31,7 @@ class RecordStore {
         return deletedRecords;
     }
 
-    public deleteByValue(key: Key) {
+    public deleteByValue(key: Key | FDBKeyRange) {
         const range = key instanceof FDBKeyRange ? key : FDBKeyRange.only(key);
 
         const deletedRecords: Record[] = this.records
@@ -42,6 +39,10 @@ class RecordStore {
             .filter((record) => {
                 return range.includes(record.value);
             });
+
+        for (const record of deletedRecords) {
+            this.records.delete(record);
+        }
 
         return deletedRecords;
     }

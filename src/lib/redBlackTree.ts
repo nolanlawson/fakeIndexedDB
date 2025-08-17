@@ -159,12 +159,6 @@ export default class RedBlackTree {
         );
     }
 
-    getByKey(key: Key): Record | undefined {
-        return this._getByComparator(this._root, (record) =>
-            cmp(key, record.key),
-        );
-    }
-
     // value associated with the given key in subtree rooted at x; null if no such key
     private _getByComparator(
         x: Node | undefined,

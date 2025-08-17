@@ -79,13 +79,15 @@ describe("redBlackTree", () => {
             key: "b",
             value: "b",
         });
-        assert.deepStrictEqual(tree.getByKey("b"), {
-            key: "b",
-            value: "b",
-        });
+        assert.deepStrictEqual(tree.getRecords(FDBKeyRange.only("b")), [
+            {
+                key: "b",
+                value: "b",
+            },
+        ]);
 
         assert.equal(tree.get({ key: "x", value: "x" }), undefined);
-        assert.equal(tree.getByKey("x"), undefined);
+        assert.deepStrictEqual(tree.getRecords(FDBKeyRange.only("x")), []);
     });
 
     it("can do range searches", () => {
