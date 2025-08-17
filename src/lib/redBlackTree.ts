@@ -1,4 +1,4 @@
-import { Record } from "./types.js";
+import { Key, Record } from "./types.js";
 import cmp from "./cmp.js";
 
 const RED = true;
@@ -147,6 +147,25 @@ export default class RedBlackTree {
     private _get(x: Node | undefined, record: Record): Record | undefined {
         while (x) {
             const comparison = compare(record, x.record);
+            if (comparison < 0) {
+                x = x.left;
+            } else if (comparison > 0) {
+                x = x.right;
+            } else {
+                return x.record;
+            }
+        }
+        return undefined;
+    }
+
+    getByKey(key: Key): Record | undefined {
+        return this._getByKey(this._root, key);
+    }
+
+    // value associated with the given key in subtree rooted at x; null if no such key
+    private _getByKey(x: Node | undefined, key: Key): Record | undefined {
+        while (x) {
+            const comparison = cmp(key, x.record.key);
             if (comparison < 0) {
                 x = x.left;
             } else if (comparison > 0) {
