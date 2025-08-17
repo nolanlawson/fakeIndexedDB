@@ -132,7 +132,7 @@ const balance = (h: Node): Node => {
  *   - https://sedgewick.io/wp-content/themes/sedgewick/papers/2008LLRB.pdf
  *   - https://algs4.cs.princeton.edu/33balanced/RedBlackBST.java.html
  */
-export default class RedBlackBST {
+export default class RedBlackTree {
     private _root: Node | undefined;
 
     size(): number {
@@ -415,48 +415,63 @@ export default class RedBlackBST {
      *  Range count and range search.
      ***************************************************************************/
 
-    // /**
-    //  * Returns all keys in the symbol table in ascending order as an {@code Iterable}.
-    //  * To iterate over all of the keys in the symbol table named {@code st},
-    //  * use the foreach notation: {@code for (Key key : st.keys())}.
-    //  * @return all keys in the symbol table in ascending order
-    //  */
-    // public Iterable<Key> keys() {
-    //     if (isEmpty()) return new Queue<Key>();
-    //     return keys(min(), max());
-    // }
+    /**
+     * Returns all keys in the symbol table in ascending order as an {@code Iterable}.
+     * To iterate over all of the keys in the symbol table named {@code st},
+     * use the foreach notation: {@code for (Key key : st.keys())}.
+     * @return all keys in the symbol table in ascending order
+     */
+    getAllRecords(): Record[] {
+        if (!this._root) {
+            return [];
+        }
+        return this.getRecords(
+            this._min(this._root).record,
+            this._max(this._root).record,
+        );
+    }
 
-    // /**
-    //  * Returns all keys in the symbol table in the given range in ascending order,
-    //  * as an {@code Iterable}.
-    //  *
-    //  * @param  lo minimum endpoint
-    //  * @param  hi maximum endpoint
-    //  * @return all keys in the symbol table between {@code lo}
-    //  *    (inclusive) and {@code hi} (inclusive) in ascending order
-    //  * @throws IllegalArgumentException if either {@code lo} or {@code hi}
-    //  *    is {@code null}
-    //  */
-    // public Iterable<Key> keys(Key lo, Key hi) {
-    //     if (lo == null) throw new IllegalArgumentException("first argument to keys() is null");
-    //     if (hi == null) throw new IllegalArgumentException("second argument to keys() is null");
-    //
-    //     Queue<Key> queue = new Queue<Key>();
-    //     // if (isEmpty() || lo.compareTo(hi) > 0) return queue;
-    //     keys(root, queue, lo, hi);
-    //     return queue;
-    // }
-    //
-    // // add the keys between lo and hi in the subtree rooted at x
-    // // to the queue
-    // private void keys(Node x, Queue<Key> queue, Key lo, Key hi) {
-    //     if (x == null) return;
-    //     int cmplo = lo.compareTo(x.key);
-    //     int cmphi = hi.compareTo(x.key);
-    //     if (cmplo < 0) keys(x.left, queue, lo, hi);
-    //     if (cmplo <= 0 && cmphi >= 0) queue.enqueue(x.key);
-    //     if (cmphi > 0) keys(x.right, queue, lo, hi);
-    // }
+    /**
+     * Returns all keys in the symbol table in the given range in ascending order,
+     * as an {@code Iterable}.
+     *
+     * @param  lo minimum endpoint
+     * @param  hi maximum endpoint
+     * @return all keys in the symbol table between {@code lo}
+     *    (inclusive) and {@code hi} (inclusive) in ascending order
+     * @throws IllegalArgumentException if either {@code lo} or {@code hi}
+     *    is {@code null}
+     */
+    getRecords(lo: Record, hi: Record): Record[] {
+        const queue: Record[] = [];
+        this._getRecords(this._root, queue, lo, hi);
+        return queue;
+    }
+
+    // add the keys between lo and hi in the subtree rooted at x
+    // to the queue
+    private _getRecords(
+        x: Node | undefined,
+        queue: Record[],
+        lo: Record,
+        hi: Record,
+    ) {
+        if (!x) {
+            return;
+        }
+        const cmpLo = compare(lo, x.record);
+        const cmpHi = compare(hi, x.record);
+
+        if (cmpLo < 0) {
+            this._getRecords(x.left, queue, lo, hi);
+        }
+        if (cmpLo <= 0 && cmpHi >= 0) {
+            queue.push(x.record);
+        }
+        if (cmpHi > 0) {
+            this._getRecords(x.right, queue, lo, hi);
+        }
+    }
 
     // /**
     //  * Returns the number of keys in the symbol table in the given range.

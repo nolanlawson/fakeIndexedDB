@@ -1,0 +1,109 @@
+import * as assert from "assert";
+import RedBlackTree from "../../lib/redBlackTree.js";
+
+describe("redBlackTree", () => {
+    it("works for basic insertion and retrieval", () => {
+        const tree = new RedBlackTree();
+        assert.equal(tree.size(), 0);
+        tree.put({ key: "b", value: "b" });
+        assert.equal(tree.size(), 1);
+        tree.put({ key: "a", value: "a" });
+        assert.equal(tree.size(), 2);
+        tree.put({ key: "c", value: "c" });
+        assert.equal(tree.size(), 3);
+        assert.deepStrictEqual(tree.getAllRecords(), [
+            { key: "a", value: "a" },
+            { key: "b", value: "b" },
+            { key: "c", value: "c" },
+        ]);
+    });
+
+    it("overwrites duplicate key/value pairs", () => {
+        const tree = new RedBlackTree();
+        tree.put({ key: "a", value: "a" });
+        tree.put({ key: "a", value: "a" });
+        tree.put({ key: "b", value: "x" });
+        tree.put({ key: "b", value: "y" });
+        tree.put({ key: "c", value: "c" });
+        tree.put({ key: "a", value: "a" });
+        assert.equal(tree.size(), 4);
+        assert.deepStrictEqual(tree.getAllRecords(), [
+            { key: "a", value: "a" },
+            { key: "b", value: "x" },
+            { key: "b", value: "y" },
+            { key: "c", value: "c" },
+        ]);
+    });
+
+    it("works for deletions", () => {
+        const tree = new RedBlackTree();
+        tree.put({ key: "a", value: "a" });
+        tree.put({ key: "b", value: "b" });
+        tree.put({ key: "c", value: "c" });
+
+        tree.delete({ key: "b", value: "b" });
+
+        assert.equal(tree.size(), 2);
+        assert.deepStrictEqual(tree.getAllRecords(), [
+            { key: "a", value: "a" },
+            { key: "c", value: "c" },
+        ]);
+    });
+
+    it("works for deletions on nonexistent records", () => {
+        const tree = new RedBlackTree();
+        tree.put({ key: "a", value: "a" });
+        tree.put({ key: "b", value: "b" });
+        tree.put({ key: "c", value: "c" });
+
+        tree.delete({ key: "x", value: "x" });
+
+        assert.equal(tree.size(), 3);
+        assert.deepStrictEqual(tree.getAllRecords(), [
+            { key: "a", value: "a" },
+            { key: "b", value: "b" },
+            { key: "c", value: "c" },
+        ]);
+    });
+
+    it("can do range searches", () => {
+        const tree = new RedBlackTree();
+        tree.put({ key: "c", value: "c" });
+        tree.put({ key: "e", value: "e" });
+        tree.put({ key: "a", value: "a" });
+        tree.put({ key: "b", value: "b" });
+        tree.put({ key: "d", value: "d" });
+
+        // get all
+        assert.equal(tree.size(), 5);
+        assert.deepStrictEqual(tree.getAllRecords(), [
+            { key: "a", value: "a" },
+            { key: "b", value: "b" },
+            { key: "c", value: "c" },
+            { key: "d", value: "d" },
+            { key: "e", value: "e" },
+        ]);
+
+        // in bounds
+        assert.deepStrictEqual(
+            tree.getRecords({ key: "b", value: "b" }, { key: "d", value: "d" }),
+            [
+                { key: "b", value: "b" },
+                { key: "c", value: "c" },
+                { key: "d", value: "d" },
+            ],
+        );
+
+        // out of bounds
+        assert.deepStrictEqual(
+            tree.getRecords({ key: "0", value: "0" }, { key: "z", value: "z" }),
+            [
+                { key: "a", value: "a" },
+                { key: "b", value: "b" },
+                { key: "c", value: "c" },
+                { key: "d", value: "d" },
+                { key: "e", value: "e" },
+            ],
+        );
+    });
+});
