@@ -66,6 +66,27 @@ describe("redBlackTree", () => {
         ]);
     });
 
+    it("works for get and getByKey", () => {
+        const tree = new RedBlackTree();
+        tree.put({ key: "a", value: "a" });
+        tree.put({ key: "b", value: "b" });
+        tree.put({ key: "c", value: "c" });
+
+        tree.delete({ key: "a", value: "a" });
+
+        assert.deepStrictEqual(tree.get({ key: "b", value: "b" }), {
+            key: "b",
+            value: "b",
+        });
+        assert.deepStrictEqual(tree.getByKey("b"), {
+            key: "b",
+            value: "b",
+        });
+
+        assert.equal(tree.get({ key: "x", value: "x" }), undefined);
+        assert.equal(tree.getByKey("x"), undefined);
+    });
+
     it("can do range searches", () => {
         const tree = new RedBlackTree();
         tree.put({ key: "c", value: "c" });

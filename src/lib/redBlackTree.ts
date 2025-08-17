@@ -1,5 +1,6 @@
 import { Key, Record } from "./types.js";
 import cmp from "./cmp.js";
+import FDBKeyRange from "../FDBKeyRange";
 
 const RED = true;
 const BLACK = false;
@@ -24,6 +25,8 @@ type RedNode = Node & { color: typeof RED };
 type NodeWithLeft = Node & { left: Node };
 type NodeWithRight = Node & { right: Node };
 type NodeWithBoth = NodeWithLeft & NodeWithRight;
+
+type Comparator = (record: Record) => number;
 
 const compare = (a: Record, b: Record): number => {
     const keyComparison = cmp(a.key, b.key);
@@ -140,32 +143,24 @@ export default class RedBlackTree {
     }
 
     get(record: Record): Record | undefined {
-        return this._get(this._root, record);
-    }
-
-    // value associated with the given key in subtree rooted at x; null if no such key
-    private _get(x: Node | undefined, record: Record): Record | undefined {
-        while (x) {
-            const comparison = compare(record, x.record);
-            if (comparison < 0) {
-                x = x.left;
-            } else if (comparison > 0) {
-                x = x.right;
-            } else {
-                return x.record;
-            }
-        }
-        return undefined;
+        return this._getByComparator(this._root, (otherRecord) =>
+            compare(record, otherRecord),
+        );
     }
 
     getByKey(key: Key): Record | undefined {
-        return this._getByKey(this._root, key);
+        return this._getByComparator(this._root, (record) =>
+            cmp(key, record.key),
+        );
     }
 
     // value associated with the given key in subtree rooted at x; null if no such key
-    private _getByKey(x: Node | undefined, key: Key): Record | undefined {
+    private _getByComparator(
+        x: Node | undefined,
+        comparator: Comparator,
+    ): Record | undefined {
         while (x) {
-            const comparison = cmp(key, x.record.key);
+            const comparison = comparator(x.record);
             if (comparison < 0) {
                 x = x.left;
             } else if (comparison > 0) {
