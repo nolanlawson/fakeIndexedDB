@@ -261,10 +261,10 @@ export default class BinarySearchTree {
     // when adding a new node, bump the sizes for the node and all ancestors
     _incrementSizesAndRebuildIfNecessary(newNode: Node): void {
         // depth is the number of _edges_ from the new node to the root
-        let depth = -1;
+        let depth = 0;
 
         // increment all sizes and maxSizes
-        let current: Node | undefined = newNode;
+        let current: Node | undefined = newNode.parent;
         while (current) {
             depth++;
             current.size++;
@@ -292,7 +292,7 @@ export default class BinarySearchTree {
                 scapegoat!.parent,
             );
             if (scapegoat === this._root) {
-                this._root = scapegoat;
+                this._root = rebuiltNode;
             } else if (scapegoat === scapegoat!.parent!.left) {
                 scapegoat!.parent!.left = rebuiltNode;
             } else {
