@@ -15,6 +15,9 @@ interface Node {
 
 type Comparator = (record: Record) => number;
 
+// we can pick any value between 0.5 and 1
+const alpha = 2 / 3;
+
 const rebuild = (records: Record[]): Node | undefined => {
     const { length } = records;
     if (!length) {
@@ -105,14 +108,14 @@ export default class BinarySearchTree {
             };
             return;
         }
-        this._put(this._root, record);
+        this._put(this._root, record, 0);
     }
 
-    private _put(node: Node, record: Record): boolean {
+    private _put(node: Node, record: Record, depth: number): boolean {
         const comparison = this._compare(record, node.record);
         if (comparison < 0) {
             if (node.left) {
-                if (this._put(node.left, record)) {
+                if (this._put(node.left, record, depth + 1)) {
                     node.size++;
                     node.maxSize++;
                     return true;
@@ -132,7 +135,7 @@ export default class BinarySearchTree {
             }
         } else if (comparison > 0) {
             if (node.right) {
-                if (this._put(node.right, record)) {
+                if (this._put(node.right, record, depth + 1)) {
                     node.size++;
                     node.maxSize++;
                     return true;
@@ -148,6 +151,7 @@ export default class BinarySearchTree {
                 };
                 node.size++;
                 node.maxSize++;
+
                 return true;
             }
         } else if (node.deleted) {
