@@ -1,13 +1,13 @@
 import FDBKeyRange from "../FDBKeyRange.js";
 import cmp from "./cmp.js";
 import { FDBCursorDirection, Key, Record } from "./types.js";
-import RedBlackTree from "./redBlackTree.js";
+import BinarySearchTree from "./binarySearchTree.js";
 
 class RecordStore {
-    private records: RedBlackTree;
+    private records: BinarySearchTree;
 
     constructor(keysAreUnique: boolean) {
-        this.records = new RedBlackTree(keysAreUnique);
+        this.records = new BinarySearchTree(keysAreUnique);
     }
 
     public get(key: Key | FDBKeyRange) {
@@ -49,7 +49,7 @@ class RecordStore {
 
     public clear() {
         const deletedRecords = this.records.getAllRecords();
-        this.records = new RedBlackTree();
+        this.records = new BinarySearchTree();
         return deletedRecords;
     }
 

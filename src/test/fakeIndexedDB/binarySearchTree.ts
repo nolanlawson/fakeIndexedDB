@@ -1,10 +1,10 @@
 import * as assert from "assert";
-import RedBlackTree from "../../lib/redBlackTree.js";
+import BinarySearchTree from "../../lib/binarySearchTree.js";
 import FDBKeyRange from "../../FDBKeyRange.js";
 
-describe("redBlackTree", () => {
+describe("binarySearchTree", () => {
     it("works for basic insertion and retrieval", () => {
-        const tree = new RedBlackTree();
+        const tree = new BinarySearchTree();
         assert.equal(tree.size(), 0);
         tree.put({ key: "b", value: "b" });
         assert.equal(tree.size(), 1);
@@ -20,7 +20,7 @@ describe("redBlackTree", () => {
     });
 
     it("overwrites duplicate key/value pairs", () => {
-        const tree = new RedBlackTree();
+        const tree = new BinarySearchTree();
         tree.put({ key: "a", value: "a" });
         tree.put({ key: "a", value: "a" });
         tree.put({ key: "b", value: "x" });
@@ -37,7 +37,7 @@ describe("redBlackTree", () => {
     });
 
     it("works for deletions", () => {
-        const tree = new RedBlackTree();
+        const tree = new BinarySearchTree();
         tree.put({ key: "a", value: "a" });
         tree.put({ key: "b", value: "b" });
         tree.put({ key: "c", value: "c" });
@@ -52,7 +52,7 @@ describe("redBlackTree", () => {
     });
 
     it("works for deletions on nonexistent records", () => {
-        const tree = new RedBlackTree();
+        const tree = new BinarySearchTree();
         tree.put({ key: "a", value: "a" });
         tree.put({ key: "b", value: "b" });
         tree.put({ key: "c", value: "c" });
@@ -68,7 +68,7 @@ describe("redBlackTree", () => {
     });
 
     it("works for get and getByKey", () => {
-        const tree = new RedBlackTree();
+        const tree = new BinarySearchTree();
         tree.put({ key: "a", value: "a" });
         tree.put({ key: "b", value: "b" });
         tree.put({ key: "c", value: "c" });
@@ -91,7 +91,7 @@ describe("redBlackTree", () => {
     });
 
     it("can do range searches", () => {
-        const tree = new RedBlackTree();
+        const tree = new BinarySearchTree();
         tree.put({ key: "c", value: "c" });
         tree.put({ key: "e", value: "e" });
         tree.put({ key: "a", value: "a" });
