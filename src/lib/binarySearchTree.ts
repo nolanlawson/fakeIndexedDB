@@ -20,6 +20,8 @@ type Comparator = (record: Record) => number;
 // we can pick any value between 0.5 and 1, 2/3 seems common
 const alpha = 2 / 3;
 
+const everythingKeyRange = new FDBKeyRange(undefined, undefined, false, false);
+
 // rebuild the whole tree from scratch, used by scapegoat trees for rebalancing instead of rotation
 const rebuild = (
     records: Record[],
@@ -123,20 +125,19 @@ export default class BinarySearchTree {
             };
             return;
         }
-        this._put(this._root, record, 0);
+        const newNode = this._put(this._root, record);
+        if (newNode) {
+            this._incrementSizesAndRebuildIfNecessary(newNode);
+        }
     }
 
-    private _put(node: Node, record: Record, depth: number): boolean {
+    private _put(node: Node, record: Record): Node | undefined {
         const comparison = this._compare(record, node.record);
         if (comparison < 0) {
             if (node.left) {
-                if (this._put(node.left, record, depth + 1)) {
-                    node.size++;
-                    node.maxSize++;
-                    return true;
-                }
+                return this._put(node.left, record);
             } else {
-                node.left = {
+                return (node.left = {
                     record,
                     left: undefined,
                     right: undefined,
@@ -144,20 +145,13 @@ export default class BinarySearchTree {
                     size: 1,
                     maxSize: 1,
                     deleted: false,
-                };
-                node.size++;
-                node.maxSize++;
-                return true;
+                });
             }
         } else if (comparison > 0) {
             if (node.right) {
-                if (this._put(node.right, record, depth + 1)) {
-                    node.size++;
-                    node.maxSize++;
-                    return true;
-                }
+                return this._put(node.right, record);
             } else {
-                node.right = {
+                return (node.right = {
                     record,
                     left: undefined,
                     right: undefined,
@@ -165,11 +159,7 @@ export default class BinarySearchTree {
                     size: 1,
                     maxSize: 1,
                     deleted: false,
-                };
-                node.size++;
-                node.maxSize++;
-
-                return true;
+                });
             }
         } else if (node.deleted) {
             // undelete
@@ -177,12 +167,11 @@ export default class BinarySearchTree {
             node.record = record;
             node.size++;
             node.maxSize++;
-            return true;
+            return node;
         } else {
-            // replace, don't add, so no increment
+            // replace, don't add, so no need to increment. return undefined
             node.record = record;
         }
-        return false;
     }
 
     delete(record: Record): void {
@@ -199,18 +188,14 @@ export default class BinarySearchTree {
     _delete(node: Node, record: Record): boolean {
         const comparison = this._compare(record, node.record);
         if (comparison < 0) {
-            if (node.left) {
-                if (this._delete(node.left, record)) {
-                    node.size--;
-                    return true;
-                }
+            if (node.left && this._delete(node.left, record)) {
+                node.size--;
+                return true;
             }
         } else if (comparison > 0) {
-            if (node.right) {
-                if (this._delete(node.right, record)) {
-                    node.size--;
-                    return true;
-                }
+            if (node.right && this._delete(node.right, record)) {
+                node.size--;
+                return true;
             }
         } else if (!node.deleted) {
             node.deleted = true;
@@ -221,21 +206,23 @@ export default class BinarySearchTree {
     }
 
     getAllRecords(): Record[] {
-        return this.getRecords(
-            new FDBKeyRange(undefined, undefined, false, false),
-        );
+        return this.getRecords(everythingKeyRange);
     }
 
     getRecords(keyRange: FDBKeyRange): Record[] {
-        if (!this._root) {
+        return this._getRecordsForNode(this._root, keyRange);
+    }
+
+    private _getRecordsForNode(node: Node | undefined, keyRange: FDBKeyRange) {
+        if (!node) {
             return [];
         }
         const result: Record[] = [];
-        this._getRecords(this._root, keyRange, result);
+        this._findRecords(node, keyRange, result);
         return result;
     }
 
-    private _getRecords(node: Node, keyRange: FDBKeyRange, result: Record[]) {
+    private _findRecords(node: Node, keyRange: FDBKeyRange, result: Record[]) {
         const { lower, upper, lowerOpen, upperOpen } = keyRange;
         const {
             record: { key },
@@ -251,7 +238,6 @@ export default class BinarySearchTree {
         const goRight = this._keysAreUnique
             ? upperComparison > 0
             : upperComparison >= 0;
-
         const lowerMatches = lowerOpen
             ? lowerComparison < 0
             : lowerComparison <= 0;
@@ -260,7 +246,7 @@ export default class BinarySearchTree {
             : upperComparison >= 0;
 
         if (goLeft && node.left) {
-            this._getRecords(node.left, keyRange, result);
+            this._findRecords(node.left, keyRange, result);
         }
 
         if (lowerMatches && upperMatches && !node.deleted) {
@@ -268,7 +254,51 @@ export default class BinarySearchTree {
         }
 
         if (goRight && node.right) {
-            this._getRecords(node.right, keyRange, result);
+            this._findRecords(node.right, keyRange, result);
+        }
+    }
+
+    // when adding a new node, bump the sizes for the node and all ancestors
+    _incrementSizesAndRebuildIfNecessary(newNode: Node): void {
+        // depth is the number of _edges_ from the new node to the root
+        let depth = -1;
+
+        // increment all sizes and maxSizes
+        let current: Node | undefined = newNode;
+        while (current) {
+            depth++;
+            current.size++;
+            current.maxSize++;
+            current = current.parent;
+        }
+
+        // this is the case where we need to find the scapegoat and rebuild the tree
+        // we do so if the following height-balancing property does not hold:
+        // > height(scapegoat tree) <= floor(log1/alpha(maxSize(tree))) + 1.
+        if (depth > 1 + Math.floor(Math.log(1 / alpha) * this._root!.maxSize)) {
+            let current: Node | undefined = newNode;
+            let scapegoat: Node | undefined;
+            while (current) {
+                if (current.maxSize / current.parent!.maxSize > alpha) {
+                    // mathematically there must be a scapegoat somewhere in the ancestor chain
+                    scapegoat = current.parent!;
+                    break;
+                }
+                current = current.parent;
+            }
+
+            const rebuiltNode = rebuild(
+                this._getRecordsForNode(scapegoat, everythingKeyRange),
+                scapegoat!.parent,
+            );
+            if (scapegoat === this._root) {
+                this._root = scapegoat;
+            } else if (scapegoat === scapegoat!.parent!.left) {
+                scapegoat!.parent!.left = rebuiltNode;
+            } else {
+                // scapegoat === scapegoat.parent.right
+                scapegoat!.parent!.right = rebuiltNode;
+            }
         }
     }
 }
