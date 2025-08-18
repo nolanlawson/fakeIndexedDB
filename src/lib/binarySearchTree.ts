@@ -4,38 +4,52 @@ import FDBKeyRange from "../FDBKeyRange.js";
 
 interface Node {
     record: Record;
+    left: Node | undefined;
+    right: Node | undefined;
+    parent: Node | undefined;
     // actual number of records in the tree
     size: number;
     // total number of records including deleted tombstones
     maxSize: number;
-    left: Node | undefined;
-    right: Node | undefined;
+    // deleted marker (tombstone)
     deleted: boolean;
 }
 
 type Comparator = (record: Record) => number;
 
-// we can pick any value between 0.5 and 1
+// we can pick any value between 0.5 and 1, 2/3 seems common
 const alpha = 2 / 3;
 
-const rebuild = (records: Record[]): Node | undefined => {
+// rebuild the whole tree from scratch, used by scapegoat trees for rebalancing instead of rotation
+const rebuild = (
+    records: Record[],
+    parent: Node | undefined,
+): Node | undefined => {
     const { length } = records;
     if (!length) {
         return undefined;
     }
     const mid = length >>> 1; // like Math.floor(records.length / 2) but fast
-    const left = rebuild(records.slice(0, mid));
-    const right = rebuild(records.slice(mid + 1));
-    const size = (left ? left.size : 0) + (right ? right.size : 0) + 1;
 
-    return {
+    const node: Node = {
         record: records[mid],
-        size,
-        maxSize: size,
-        left,
-        right,
+        left: undefined,
+        right: undefined,
+        parent,
+        size: 0,
+        maxSize: 0,
         deleted: false,
     };
+
+    const left = rebuild(records.slice(0, mid), node);
+    const right = rebuild(records.slice(mid + 1), node);
+    const size = (left ? left.size : 0) + (right ? right.size : 0) + 1;
+
+    node.left = left;
+    node.right = right;
+    node.size = node.maxSize = size;
+
+    return node;
 };
 
 /**
@@ -100,11 +114,12 @@ export default class BinarySearchTree {
         if (!this._root) {
             this._root = {
                 record,
+                left: undefined,
+                right: undefined,
+                parent: undefined,
                 size: 1,
                 maxSize: 1,
                 deleted: false,
-                left: undefined,
-                right: undefined,
             };
             return;
         }
@@ -123,11 +138,12 @@ export default class BinarySearchTree {
             } else {
                 node.left = {
                     record,
+                    left: undefined,
+                    right: undefined,
+                    parent: node,
                     size: 1,
                     maxSize: 1,
                     deleted: false,
-                    left: undefined,
-                    right: undefined,
                 };
                 node.size++;
                 node.maxSize++;
@@ -143,11 +159,12 @@ export default class BinarySearchTree {
             } else {
                 node.right = {
                     record,
+                    left: undefined,
+                    right: undefined,
+                    parent: node,
                     size: 1,
                     maxSize: 1,
                     deleted: false,
-                    left: undefined,
-                    right: undefined,
                 };
                 node.size++;
                 node.maxSize++;
@@ -175,7 +192,7 @@ export default class BinarySearchTree {
         this._delete(this._root, record);
         if (this._root.maxSize > 2 * this._root.size) {
             // if maxSize > (2 * size) then we have too many deletion tombstones and need to rebuild the entire tree
-            this._root = rebuild(this.getAllRecords());
+            this._root = rebuild(this.getAllRecords(), undefined);
         }
     }
 
