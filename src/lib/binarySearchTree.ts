@@ -175,39 +175,44 @@ export default class BinarySearchTree {
             return [];
         }
         const result: Record[] = [];
-        this._getRecords(this._root, result, keyRange);
+        this._getRecords(this._root, keyRange, result);
         return result;
     }
 
-    private _getRecords(node: Node, result: Record[], keyRange: FDBKeyRange) {
-        const goLeft =
-            keyRange.lower === undefined ||
-            cmp(keyRange.lower, node.record.key) <= 0;
-        const goRight =
-            keyRange.upper === undefined ||
-            cmp(keyRange.upper, node.record.key) >= 0;
+    private _getRecords(node: Node, keyRange: FDBKeyRange, result: Record[]) {
+        const { lower, upper, lowerOpen, upperOpen } = keyRange;
+        const {
+            record: { key },
+        } = node;
+
+        const lowerComparison = lower === undefined ? -1 : cmp(lower, key);
+        const upperComparison = upper === undefined ? 1 : cmp(upper, key);
+
+        // if keys are non-unique then we need to go left/right even for equality
+        const goLeft = this._keysAreUnique
+            ? lowerComparison < 0
+            : lowerComparison <= 0;
+        const goRight = this._keysAreUnique
+            ? upperComparison > 0
+            : upperComparison >= 0;
+
+        const lowerMatches = lowerOpen
+            ? lowerComparison < 0
+            : lowerComparison <= 0;
+        const upperMatches = upperOpen
+            ? upperComparison > 0
+            : upperComparison >= 0;
 
         if (goLeft && node.left) {
-            this._getRecords(node.left, result, keyRange);
+            this._getRecords(node.left, keyRange, result);
         }
-
-        const lowerMatches =
-            keyRange.lower === undefined ||
-            (keyRange.lowerOpen
-                ? cmp(keyRange.lower, node.record.key) < 0
-                : cmp(keyRange.lower, node.record.key) <= 0);
-        const upperMatches =
-            keyRange.upper === undefined ||
-            (keyRange.upperOpen
-                ? cmp(keyRange.upper, node.record.key) > 0
-                : cmp(keyRange.upper, node.record.key) >= 0);
 
         if (lowerMatches && upperMatches && !node.deleted) {
             result.push(node.record);
         }
 
         if (goRight && node.right) {
-            this._getRecords(node.right, result, keyRange);
+            this._getRecords(node.right, keyRange, result);
         }
     }
 }
