@@ -226,20 +226,18 @@ export default class BinarySearchTree {
 
         // if keys are non-unique then we need to go left/right even for equality
         // else we can just do LT/GT rather than LTE/GTE as a slight optimization
-        const hasMoreLeft = this._keysAreUnique
+        const moreLeft = this._keysAreUnique
             ? lowerComparison < 0
             : lowerComparison <= 0;
-        const hasMoreRight = this._keysAreUnique
+        const moreRight = this._keysAreUnique
             ? upperComparison > 0
             : upperComparison >= 0;
 
         // in descending mode we start with rightmost nodes, else leftmost
-        const startDirection = descending
-            ? hasMoreRight && "right"
-            : hasMoreLeft && "left";
-        const endDirection = descending
-            ? hasMoreLeft && "left"
-            : hasMoreRight && "right";
+        const moreStart = descending ? moreRight : moreLeft;
+        const moreEnd = descending ? moreLeft : moreRight;
+        const start = descending ? "right" : "left";
+        const end = descending ? "left" : "right";
 
         // does the current record actually match the key range?
         const lowerMatches = lowerOpen
@@ -249,20 +247,16 @@ export default class BinarySearchTree {
             ? upperComparison > 0
             : upperComparison >= 0;
 
-        if (startDirection && node[startDirection]) {
-            yield* this._findRecords(
-                node[startDirection],
-                keyRange,
-                descending,
-            );
+        if (moreStart && node[start]) {
+            yield* this._findRecords(node[start], keyRange, descending);
         }
 
         if (lowerMatches && upperMatches && !node.deleted) {
             yield node.record;
         }
 
-        if (endDirection && node[endDirection]) {
-            yield* this._findRecords(node[endDirection], keyRange, descending);
+        if (moreEnd && node[end]) {
+            yield* this._findRecords(node[end], keyRange, descending);
         }
     }
 
