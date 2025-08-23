@@ -7,52 +7,17 @@ interface Node {
     left: Node | undefined;
     right: Node | undefined;
     parent: Node | undefined;
-    // actual number of records in the tree
-    size: number;
-    // total number of records including deleted tombstones
-    maxSize: number;
     // deleted marker (tombstone)
     deleted: boolean;
+    // black (false) or red (true)
+    red: boolean;
 }
 
 type Comparator = (record: Record) => number;
 
-// we can pick any value between 0.5 and 1, 2/3 seems common
-const alpha = 2 / 3;
-
 const everythingKeyRange = new FDBKeyRange(undefined, undefined, false, false);
 
-// rebuild the whole tree from scratch, used by scapegoat trees for rebalancing instead of rotation
-const rebuild = (
-    records: Record[],
-    parent: Node | undefined,
-): Node | undefined => {
-    const { length } = records;
-    if (!length) {
-        return undefined;
-    }
-    const mid = length >>> 1; // like Math.floor(records.length / 2) but fast
-
-    const node: Node = {
-        record: records[mid],
-        left: undefined,
-        right: undefined,
-        parent,
-        size: 0,
-        maxSize: 0,
-        deleted: false,
-    };
-
-    const left = rebuild(records.slice(0, mid), node);
-    const right = rebuild(records.slice(mid + 1), node);
-    const size = (left ? left.size : 0) + (right ? right.size : 0) + 1;
-
-    node.left = left;
-    node.right = right;
-    node.size = node.maxSize = size;
-
-    return node;
-};
+const isRightChild = (node: Node) => node === node.parent!.right;
 
 /**
  * Simple scapegoat binary tree, based on https://en.wikipedia.org/wiki/Scapegoat_tree
@@ -60,6 +25,7 @@ const rebuild = (
 export default class BinarySearchTree {
     private _root: Node | undefined;
     private readonly _keysAreUnique: boolean;
+    private _size = 0;
 
     /**
      *
@@ -72,7 +38,7 @@ export default class BinarySearchTree {
     }
 
     size(): number {
-        return this._root ? this._root.size : 0;
+        return this._size;
     }
 
     get(record: Record): Record | undefined {
@@ -119,15 +85,21 @@ export default class BinarySearchTree {
                 left: undefined,
                 right: undefined,
                 parent: undefined,
-                size: 1,
-                maxSize: 1,
                 deleted: false,
+                // the root is always black in a red-black tree
+                red: false,
             };
+            this._size++;
             return;
         }
         const newNode = this._put(this._root, record);
         if (newNode) {
-            this._incrementSizesAndRebuildIfNecessary(newNode);
+            this._size++;
+
+            // if newNode === this._root then we merely undeleted the root, and no rebalancing is needed
+            if (newNode !== this._root) {
+                this._rebalanceTree(newNode);
+            }
         }
     }
 
@@ -142,9 +114,8 @@ export default class BinarySearchTree {
                     left: undefined,
                     right: undefined,
                     parent: node,
-                    size: 1,
-                    maxSize: 1,
                     deleted: false,
+                    red: true,
                 });
             }
         } else if (comparison > 0) {
@@ -156,17 +127,14 @@ export default class BinarySearchTree {
                     left: undefined,
                     right: undefined,
                     parent: node,
-                    size: 1,
-                    maxSize: 1,
                     deleted: false,
+                    red: true,
                 });
             }
         } else if (node.deleted) {
             // undelete
             node.deleted = false;
             node.record = record;
-            node.size++;
-            node.maxSize++;
             return node;
         } else {
             // replace, don't add, so no need to increment. return undefined
@@ -178,10 +146,8 @@ export default class BinarySearchTree {
         if (!this._root) {
             return;
         }
-        this._delete(this._root, record);
-        if (this._root.maxSize > 2 * this._root.size) {
-            // if maxSize > (2 * size) then we have too many deletion tombstones and need to rebuild the entire tree
-            this._root = rebuild(this.getAllRecords(), undefined);
+        if (this._delete(this._root, record)) {
+            this._size--;
         }
     }
 
@@ -189,17 +155,14 @@ export default class BinarySearchTree {
         const comparison = this._compare(record, node.record);
         if (comparison < 0) {
             if (node.left && this._delete(node.left, record)) {
-                node.size--;
                 return true;
             }
         } else if (comparison > 0) {
             if (node.right && this._delete(node.right, record)) {
-                node.size--;
                 return true;
             }
         } else if (!node.deleted) {
             node.deleted = true;
-            node.size--;
             return true;
         }
         return false;
@@ -258,47 +221,75 @@ export default class BinarySearchTree {
         }
     }
 
-    // when adding a new node, bump the sizes for the node and all ancestors
-    _incrementSizesAndRebuildIfNecessary(newNode: Node): void {
-        // depth is the number of _edges_ from the new node to the root
-        let depth = 0;
+    _rebalanceTree(node: Node) {
+        let parent = node.parent!;
+        do {
+            // case 1 -  no red/black violation
+            if (!parent.red) {
+                return;
+            }
+            const grandparent = parent.parent;
 
-        // increment all sizes and maxSizes
-        let current: Node | undefined = newNode.parent;
-        while (current) {
-            depth++;
-            current.size++;
-            current.maxSize++;
-            current = current.parent;
-        }
+            if (!grandparent) {
+                // case #4 - parent is the red root, n is also red, so parent goes black
+                parent.red = false;
+                return;
+            }
 
-        // this is the case where we need to find the scapegoat and rebuild the tree
-        // we do so if the following height-balancing property does not hold:
-        // > height(scapegoat tree) <= floor(log1/alpha(maxSize(tree))) + 1.
-        if (depth > 1 + Math.floor(Math.log(1 / alpha) * this._root!.maxSize)) {
-            let current: Node | undefined = newNode;
-            let scapegoat: Node | undefined;
-            while (current) {
-                if (current.maxSize / current.parent!.maxSize > alpha) {
-                    // mathematically there must be a scapegoat somewhere in the ancestor chain
-                    scapegoat = current.parent!;
-                    break;
+            const parentIsRightChild = isRightChild(parent);
+            const uncle = parentIsRightChild
+                ? grandparent.left
+                : grandparent.right;
+            if (!uncle || !uncle.red) {
+                if (
+                    node === (parentIsRightChild ? parent.left : parent.right)
+                ) {
+                    // case #5 - parent is red but uncle is black
+                    this._rotateSubtree(parent, parentIsRightChild);
+                    node = parent;
+                    parent = parentIsRightChild
+                        ? grandparent.right!
+                        : grandparent.left!;
                 }
-                current = current.parent;
+
+                // case #6 - node is "outer" grandchild of grandparent
+                this._rotateSubtree(grandparent, !parentIsRightChild);
+                parent.red = false;
+                grandparent.red = true;
+                return;
             }
 
-            const rebuiltNode = rebuild(
-                this._getRecordsForNode(scapegoat, everythingKeyRange),
-                scapegoat!.parent,
-            );
-            if (scapegoat === this._root) {
-                this._root = rebuiltNode;
-            } else if (scapegoat === scapegoat!.parent!.left) {
-                scapegoat!.parent!.left = rebuiltNode;
-            } else {
-                // scapegoat === scapegoat.parent.right
-                scapegoat!.parent!.right = rebuiltNode;
-            }
+            // case #2 - parent and uncle are both red, so both of them go black and grandparent goes red
+            parent.red = false;
+            uncle.red = false;
+            grandparent.red = true;
+            node = grandparent;
+        } while (node.parent ? (parent = node.parent) : false);
+
+        // case #3 - current node is the root, all constraints satisfied
+    }
+
+    // based on https://en.wikipedia.org/wiki/Red%E2%80%93black_tree#Implementation
+    _rotateSubtree(node: Node, right: boolean) {
+        const parent = node.parent!;
+        const newRoot = right ? node.left! : node.right!; // opposite direction
+        const newChild = right ? newRoot.right : newRoot.left;
+
+        node[right ? "left" : "right"] = newChild;
+
+        if (newChild) {
+            newChild.parent = node;
         }
+
+        newRoot[right ? "right" : "left"] = node;
+
+        newRoot.parent = parent;
+        node.parent = newRoot;
+        if (parent) {
+            parent[node === parent.right ? "right" : "left"] = newRoot;
+        } else {
+            this._root = newRoot;
+        }
+        return newRoot;
     }
 }
