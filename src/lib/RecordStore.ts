@@ -78,21 +78,16 @@ class RecordStore {
                     let previousValue: Record | undefined = undefined;
                     return {
                         next: (): IteratorResult<Record> => {
-                            let current: IteratorResult<Record> | undefined;
-                            while (!(current = next()).done) {
-                                // for nextunique, continue if we already emitted the lowest unique value
-                                if (
-                                    previousValue !== undefined &&
-                                    cmp(
-                                        previousValue.key,
-                                        current.value.key,
-                                    ) === 0
-                                ) {
-                                    continue;
-                                }
-                                previousValue = current.value;
-                                return current;
+                            let current = next();
+                            // for nextunique, continue if we already emitted the lowest unique value
+                            while (
+                                !current.done &&
+                                previousValue !== undefined &&
+                                cmp(previousValue.key, current.value.key) === 0
+                            ) {
+                                current = next();
                             }
+                            previousValue = current.value;
                             return current;
                         },
                     };
