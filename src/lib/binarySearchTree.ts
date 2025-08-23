@@ -189,11 +189,14 @@ export default class BinarySearchTree {
         }
     }
 
-    *getAllRecords(descending: boolean = false) {
+    *getAllRecords(descending: boolean = false): Iterable<Record> {
         yield* this.getRecords(EVERYTHING_KEY_RANGE, descending);
     }
 
-    *getRecords(keyRange: FDBKeyRange, descending: boolean = false) {
+    *getRecords(
+        keyRange: FDBKeyRange,
+        descending: boolean = false,
+    ): Iterable<Record> {
         yield* this._getRecordsForNode(this._root, keyRange, descending);
     }
 
@@ -201,7 +204,7 @@ export default class BinarySearchTree {
         node: Node | undefined,
         keyRange: FDBKeyRange,
         descending: boolean = false,
-    ) {
+    ): Iterable<Record> {
         if (!node) {
             return;
         }
@@ -212,7 +215,7 @@ export default class BinarySearchTree {
         node: Node,
         keyRange: FDBKeyRange,
         descending: boolean = false,
-    ): Generator<Record> {
+    ): Iterable<Record> {
         const { lower, upper, lowerOpen, upperOpen } = keyRange;
         const {
             record: { key },
@@ -222,12 +225,23 @@ export default class BinarySearchTree {
         const upperComparison = upper === undefined ? 1 : cmp(upper, key);
 
         // if keys are non-unique then we need to go left/right even for equality
-        const goLeft = this._keysAreUnique
+        // else we can just do LT/GT rather than LTE/GTE as a slight optimization
+        const hasMoreLeft = this._keysAreUnique
             ? lowerComparison < 0
             : lowerComparison <= 0;
-        const goRight = this._keysAreUnique
+        const hasMoreRight = this._keysAreUnique
             ? upperComparison > 0
             : upperComparison >= 0;
+
+        // in descending mode we start with rightmost nodes, else leftmost
+        const startDirection = descending
+            ? hasMoreRight && "right"
+            : hasMoreLeft && "left";
+        const endDirection = descending
+            ? hasMoreLeft && "left"
+            : hasMoreRight && "right";
+
+        // does the current record actually match the key range?
         const lowerMatches = lowerOpen
             ? lowerComparison < 0
             : lowerComparison <= 0;
@@ -235,28 +249,20 @@ export default class BinarySearchTree {
             ? upperComparison > 0
             : upperComparison >= 0;
 
-        if (descending) {
-            if (goRight && node.right) {
-                yield* this._findRecords(node.right, keyRange, descending);
-            }
-        } else {
-            if (goLeft && node.left) {
-                yield* this._findRecords(node.left, keyRange, descending);
-            }
+        if (startDirection && node[startDirection]) {
+            yield* this._findRecords(
+                node[startDirection],
+                keyRange,
+                descending,
+            );
         }
 
         if (lowerMatches && upperMatches && !node.deleted) {
             yield node.record;
         }
 
-        if (descending) {
-            if (goLeft && node.left) {
-                yield* this._findRecords(node.left, keyRange, descending);
-            }
-        } else {
-            if (goRight && node.right) {
-                yield* this._findRecords(node.right, keyRange, descending);
-            }
+        if (endDirection && node[endDirection]) {
+            yield* this._findRecords(node[endDirection], keyRange, descending);
         }
     }
 
