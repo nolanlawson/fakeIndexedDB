@@ -54,86 +54,70 @@ class RecordStore {
     }
 
     public values(range?: FDBKeyRange, direction: FDBCursorDirection = "next") {
+        const descending = direction === "prev" || direction === "prevunique";
         const records = range
-            ? [...this.records.getRecords(range)]
-            : [...this.records.getAllRecords()];
-
-        if (direction === "prev" || direction === "prevunique") {
-            records.reverse();
-        }
+            ? this.records.getRecords(range, descending)
+            : this.records.getAllRecords(descending);
 
         return {
             [Symbol.iterator]: () => {
-                let i = 0;
-
                 const next = () => {
-                    const done = i >= records.length;
-                    const value = done ? undefined : records[i];
-
-                    i++;
-
-                    // The weird "as IteratorResult<Record>" is needed because of
-                    // https://github.com/Microsoft/TypeScript/issues/11375 and
-                    // https://github.com/Microsoft/TypeScript/issues/2983
-                    return {
-                        done,
-                        value,
-                    } as IteratorResult<Record>;
+                    return records.next();
                 };
 
                 if (direction === "next" || direction === "prev") {
                     return { next };
                 }
 
-                // peek at the next value without incrementing the iterator
-                const peek = () => {
-                    const iOriginal = i;
-                    const result = next();
-                    i = iOriginal;
-                    return result;
-                };
-
                 // For nextunique/prevunique, return an iterator that skips seen values
-                // Note that we must resturn the _lowest_ value regardless of direction:
+                // Note that we must return the _lowest_ value regardless of direction:
                 // > Iterating with "prevunique" visits the same records that "nextunique"
                 // > visits, but in reverse order.
                 // https://w3c.github.io/IndexedDB/#dom-idbcursordirection-prevunique
-                let prevValue: Record | undefined = undefined;
-                return {
-                    next: (): IteratorResult<Record> => {
-                        let current: IteratorResult<Record>;
-                        while (!(current = next()).done) {
-                            const { done, value } = current;
-                            if (direction === "nextunique") {
+                if (direction === "nextunique") {
+                    let previousValue: Record | undefined = undefined;
+                    return {
+                        next: (): IteratorResult<Record> => {
+                            let current: IteratorResult<Record> | undefined;
+                            while (!(current = next()).done) {
                                 // for nextunique, continue if we already emitted the lowest unique value
                                 if (
-                                    prevValue !== undefined &&
-                                    cmp(prevValue.key, value.key) === 0
+                                    previousValue !== undefined &&
+                                    cmp(
+                                        previousValue.key,
+                                        current.value.key,
+                                    ) === 0
                                 ) {
                                     continue;
                                 }
-                            } else {
-                                // for prevunique, we need to peek to see if the next value will be different,
-                                // since we're trying to return the lowest unique value
-                                const { value: nextValue, done: nextDone } =
-                                    peek();
-                                if (
-                                    !nextDone &&
-                                    cmp(nextValue.key, value.key) === 0
-                                ) {
-                                    continue;
-                                }
+                                previousValue = current.value;
+                                return current;
                             }
-                            prevValue = value;
-                            return {
-                                value,
-                                done,
-                            };
+                            return current;
+                        },
+                    };
+                }
+
+                // prevunique is a bit more complex due to needing to check the next value, which
+                // invokes the iterable, so we need to keep a buffer of one "lookahead" result
+                let current = next();
+                let nextResult = next();
+
+                return {
+                    next: (): IteratorResult<Record> => {
+                        // for prevunique, we need to check if the next value will be different,
+                        // since we're trying to return the lowest unique value
+                        while (
+                            !nextResult.done &&
+                            cmp(current.value.key, nextResult.value.key) === 0
+                        ) {
+                            current = nextResult;
+                            nextResult = next();
                         }
-                        return {
-                            value: undefined,
-                            done: true,
-                        };
+                        const result = current;
+                        current = nextResult;
+                        nextResult = next();
+                        return result;
                     },
                 };
             },

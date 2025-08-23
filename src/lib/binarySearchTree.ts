@@ -189,14 +189,14 @@ export default class BinarySearchTree {
         }
     }
 
-    *getAllRecords(descending: boolean = false): Iterable<Record> {
+    *getAllRecords(descending: boolean = false): Generator<Record> {
         yield* this.getRecords(EVERYTHING_KEY_RANGE, descending);
     }
 
     *getRecords(
         keyRange: FDBKeyRange,
         descending: boolean = false,
-    ): Iterable<Record> {
+    ): Generator<Record> {
         yield* this._getRecordsForNode(this._root, keyRange, descending);
     }
 
@@ -204,7 +204,7 @@ export default class BinarySearchTree {
         node: Node | undefined,
         keyRange: FDBKeyRange,
         descending: boolean = false,
-    ): Iterable<Record> {
+    ): Generator<Record> {
         if (!node) {
             return;
         }
@@ -215,7 +215,7 @@ export default class BinarySearchTree {
         node: Node,
         keyRange: FDBKeyRange,
         descending: boolean = false,
-    ): Iterable<Record> {
+    ): Generator<Record> {
         const { lower, upper, lowerOpen, upperOpen } = keyRange;
         const {
             record: { key },
