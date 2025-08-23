@@ -4,15 +4,17 @@ import { FDBCursorDirection, Key, Record } from "./types.js";
 import BinarySearchTree from "./binarySearchTree.js";
 
 class RecordStore {
+    private keysAreUnique: boolean;
     private records: BinarySearchTree;
 
     constructor(keysAreUnique: boolean) {
-        this.records = new BinarySearchTree(keysAreUnique);
+        this.keysAreUnique = keysAreUnique;
+        this.records = new BinarySearchTree(this.keysAreUnique);
     }
 
     public get(key: Key | FDBKeyRange) {
         const range = key instanceof FDBKeyRange ? key : FDBKeyRange.only(key);
-        return [...this.records.getRecords(range)][0];
+        return this.records.getRecords(range).next().value;
     }
 
     public add(newRecord: Record) {
@@ -34,14 +36,12 @@ class RecordStore {
     public deleteByValue(key: Key | FDBKeyRange) {
         const range = key instanceof FDBKeyRange ? key : FDBKeyRange.only(key);
 
-        const deletedRecords: Record[] = [
-            ...this.records.getAllRecords(),
-        ].filter((record) => {
-            return range.includes(record.value);
-        });
-
-        for (const record of deletedRecords) {
-            this.records.delete(record);
+        const deletedRecords: Record[] = [];
+        for (const record of this.records.getAllRecords()) {
+            if (range.includes(record.value)) {
+                this.records.delete(record);
+                deletedRecords.push(record);
+            }
         }
 
         return deletedRecords;
@@ -49,7 +49,7 @@ class RecordStore {
 
     public clear() {
         const deletedRecords = [...this.records.getAllRecords()];
-        this.records = new BinarySearchTree();
+        this.records = new BinarySearchTree(this.keysAreUnique);
         return deletedRecords;
     }
 
