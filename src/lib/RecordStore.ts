@@ -22,7 +22,7 @@ class RecordStore {
     public delete(key: Key | FDBKeyRange) {
         const range = key instanceof FDBKeyRange ? key : FDBKeyRange.only(key);
 
-        const deletedRecords = this.records.getRecords(range);
+        const deletedRecords = [...this.records.getRecords(range)];
 
         for (const record of deletedRecords) {
             this.records.delete(record);
@@ -48,7 +48,7 @@ class RecordStore {
     }
 
     public clear() {
-        const deletedRecords = this.records.getAllRecords();
+        const deletedRecords = [...this.records.getAllRecords()];
         this.records = new BinarySearchTree();
         return deletedRecords;
     }
