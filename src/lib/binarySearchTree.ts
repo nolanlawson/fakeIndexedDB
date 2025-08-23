@@ -2,7 +2,7 @@ import { Record } from "./types.js";
 import cmp from "./cmp.js";
 import FDBKeyRange from "../FDBKeyRange.js";
 
-// only a maximum of 2/3 of the total number of nodes are allowed to be deleted tombstones
+// what fraction of the total number of nodes are allowed to be deleted tombstones?
 const MAX_TOMBSTONE_FACTOR = 2 / 3;
 
 const EVERYTHING_KEY_RANGE = new FDBKeyRange(
