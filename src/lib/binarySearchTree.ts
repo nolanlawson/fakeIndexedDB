@@ -174,7 +174,7 @@ export default class BinarySearchTree {
         }
     }
 
-    _delete(node: Node | undefined, record: Record): void {
+    private _delete(node: Node | undefined, record: Record): void {
         if (!node) {
             return;
         }
@@ -261,7 +261,7 @@ export default class BinarySearchTree {
     }
 
     // based on https://en.wikipedia.org/wiki/Red%E2%80%93black_tree#Insertion
-    _rebalanceTree(node: Node) {
+    private _rebalanceTree(node: Node) {
         let parent = node.parent!;
         do {
             // case 1 -  no red/black violation
@@ -310,7 +310,7 @@ export default class BinarySearchTree {
     }
 
     // based on https://en.wikipedia.org/wiki/Red%E2%80%93black_tree#Implementation
-    _rotateSubtree(node: Node, right: boolean) {
+    private _rotateSubtree(node: Node, right: boolean) {
         const parent = node.parent!;
         const newRoot = right ? node.left! : node.right!; // opposite direction
         const newChild = right ? newRoot.right : newRoot.left;
@@ -334,7 +334,7 @@ export default class BinarySearchTree {
     }
 
     // rebuild the whole tree from scratch, used to avoid too many deletion tombstones accumulating
-    _rebuild(
+    private _rebuild(
         records: Record[],
         parent: Node | undefined,
         red: boolean,
