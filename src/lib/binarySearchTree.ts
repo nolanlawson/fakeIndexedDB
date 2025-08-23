@@ -2,6 +2,15 @@ import { Record } from "./types.js";
 import cmp from "./cmp.js";
 import FDBKeyRange from "../FDBKeyRange.js";
 
+const MAX_TOMBSTONE_FACTOR = 2 / 3;
+
+const EVERYTHING_KEY_RANGE = new FDBKeyRange(
+    undefined,
+    undefined,
+    false,
+    false,
+);
+
 interface Node {
     record: Record;
     left: Node | undefined;
@@ -15,17 +24,22 @@ interface Node {
 
 type Comparator = (record: Record) => number;
 
-const everythingKeyRange = new FDBKeyRange(undefined, undefined, false, false);
-
-const isRightChild = (node: Node) => node === node.parent!.right;
-
 /**
- * Simple scapegoat binary tree, based on https://en.wikipedia.org/wiki/Scapegoat_tree
+ * Simple red-black binary tree with some aspects of a scapegoat tree. The main goal here is simplicity of
+ * implementation, tailored to the needs of IndexedDB.
+ *
+ * Basically this implements a [red-black tree][1] for insertions, but uses the much simpler [scapegoat tree][2]
+ * strategy for deletions. Deletions are a simple matter of rebuilding the tree from scratch if more than 2/3 of the
+ * tree is full of deleted (tombstone) markers.
+ *
+ * [1]: https://en.wikipedia.org/wiki/Red%E2%80%93black_tree
+ * [2]: https://en.wikipedia.org/wiki/Scapegoat_tree
  */
 export default class BinarySearchTree {
     private _root: Node | undefined;
     private readonly _keysAreUnique: boolean;
-    private _size = 0;
+    private _numTombstones = 0;
+    private _numNodes = 0;
 
     /**
      *
@@ -38,7 +52,7 @@ export default class BinarySearchTree {
     }
 
     size(): number {
-        return this._size;
+        return this._numNodes - this._numTombstones;
     }
 
     get(record: Record): Record | undefined {
@@ -89,13 +103,11 @@ export default class BinarySearchTree {
                 // the root is always black in a red-black tree
                 red: false,
             };
-            this._size++;
+            this._numNodes++;
             return;
         }
         const newNode = this._put(this._root, record);
         if (newNode) {
-            this._size++;
-
             // if newNode === this._root then we merely undeleted the root, and no rebalancing is needed
             if (newNode !== this._root) {
                 this._rebalanceTree(newNode);
@@ -109,6 +121,7 @@ export default class BinarySearchTree {
             if (node.left) {
                 return this._put(node.left, record);
             } else {
+                this._numNodes++;
                 return (node.left = {
                     record,
                     left: undefined,
@@ -122,6 +135,7 @@ export default class BinarySearchTree {
             if (node.right) {
                 return this._put(node.right, record);
             } else {
+                this._numNodes++;
                 return (node.right = {
                     record,
                     left: undefined,
@@ -135,6 +149,7 @@ export default class BinarySearchTree {
             // undelete
             node.deleted = false;
             node.record = record;
+            this._numTombstones--;
             return node;
         } else {
             // replace, don't add, so no need to increment. return undefined
@@ -146,30 +161,35 @@ export default class BinarySearchTree {
         if (!this._root) {
             return;
         }
-        if (this._delete(this._root, record)) {
-            this._size--;
+        this._delete(this._root, record);
+        if (this._numTombstones > this._numNodes * MAX_TOMBSTONE_FACTOR) {
+            // to keep the implementation simple, and because most users of fake-indexeddb are not going to be deleting
+            // a lot of nodes, just rebuild the whole tree (defragment) if the tree is too full of tombstones,
+            // inspired by the scapegoat tree: https://en.wikipedia.org/wiki/Scapegoat_tree#Deletion
+            const records = this.getAllRecords();
+            this._root = this._rebuild(records, undefined, false);
+            this._numNodes = records.length;
+            this._numTombstones = 0;
         }
     }
 
-    _delete(node: Node, record: Record): boolean {
+    _delete(node: Node | undefined, record: Record): void {
+        if (!node) {
+            return;
+        }
         const comparison = this._compare(record, node.record);
         if (comparison < 0) {
-            if (node.left && this._delete(node.left, record)) {
-                return true;
-            }
+            this._delete(node.left, record);
         } else if (comparison > 0) {
-            if (node.right && this._delete(node.right, record)) {
-                return true;
-            }
+            this._delete(node.right, record);
         } else if (!node.deleted) {
+            this._numTombstones++;
             node.deleted = true;
-            return true;
         }
-        return false;
     }
 
     getAllRecords(): Record[] {
-        return this.getRecords(everythingKeyRange);
+        return this.getRecords(EVERYTHING_KEY_RANGE);
     }
 
     getRecords(keyRange: FDBKeyRange): Record[] {
@@ -221,6 +241,7 @@ export default class BinarySearchTree {
         }
     }
 
+    // based on https://en.wikipedia.org/wiki/Red%E2%80%93black_tree#Insertion
     _rebalanceTree(node: Node) {
         let parent = node.parent!;
         do {
@@ -236,7 +257,7 @@ export default class BinarySearchTree {
                 return;
             }
 
-            const parentIsRightChild = isRightChild(parent);
+            const parentIsRightChild = parent === grandparent.right;
             const uncle = parentIsRightChild
                 ? grandparent.left
                 : grandparent.right;
@@ -291,5 +312,35 @@ export default class BinarySearchTree {
             this._root = newRoot;
         }
         return newRoot;
+    }
+
+    // rebuild the whole tree from scratch, used to avoid too many deletion tombstones accumulating
+    _rebuild(
+        records: Record[],
+        parent: Node | undefined,
+        red: boolean,
+    ): Node | undefined {
+        const { length } = records;
+        if (!length) {
+            return undefined;
+        }
+        const mid = length >>> 1; // like Math.floor(records.length / 2) but fast
+
+        const node: Node = {
+            record: records[mid],
+            left: undefined,
+            right: undefined,
+            parent,
+            deleted: false,
+            red,
+        };
+
+        const left = this._rebuild(records.slice(0, mid), node, !red);
+        const right = this._rebuild(records.slice(mid + 1), node, !red);
+
+        node.left = left;
+        node.right = right;
+
+        return node;
     }
 }
