@@ -271,7 +271,7 @@ export default class BinarySearchTree {
             const grandparent = parent.parent;
 
             if (!grandparent) {
-                // case #4 - parent is the red root, n is also red, so parent goes black
+                // case #4 - parent is the red root, node is also red, so parent goes black
                 parent.red = false;
                 return;
             }
