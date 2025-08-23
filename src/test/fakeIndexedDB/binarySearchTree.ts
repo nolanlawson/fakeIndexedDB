@@ -71,6 +71,27 @@ describe("binarySearchTree", () => {
         ]);
     });
 
+    it("can delete a lot", () => {
+        const letters = "abcdefghijklmnopqrstuvwxyz";
+        const tree = new BinarySearchTree();
+        for (const letter of [...letters]) {
+            tree.put({ key: letter, value: letter });
+        }
+        const expected = [...letters].map((letter) => ({
+            key: letter,
+            value: letter,
+        }));
+        assert.equal(tree.size(), expected.length);
+        assertRecordsEqual(tree.getAllRecords(), expected);
+
+        for (let i = 0; i < letters.length; i++) {
+            const letter = letters.charAt(i);
+            tree.delete({ key: letter, value: letter });
+            assert.equal(tree.size(), expected.length - i - 1);
+            assertRecordsEqual(tree.getAllRecords(), expected.slice(i + 1));
+        }
+    });
+
     it("works for get and getByKey", () => {
         const tree = new BinarySearchTree();
         tree.put({ key: "a", value: "a" });
