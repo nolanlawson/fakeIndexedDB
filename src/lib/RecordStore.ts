@@ -100,12 +100,11 @@ class RecordStore {
 
                 return {
                     next: (): IteratorResult<Record> => {
-                        // for prevunique, we need to check if the next value will be different,
-                        // since we're trying to return the lowest unique value
                         while (
                             !nextResult.done &&
                             cmp(current.value.key, nextResult.value.key) === 0
                         ) {
+                            // note we return the _lowest_ possible value, hence set the current
                             current = nextResult;
                             nextResult = next();
                         }
