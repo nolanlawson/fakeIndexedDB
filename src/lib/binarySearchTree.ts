@@ -72,7 +72,7 @@ export default class BinarySearchTree {
             return keyComparison;
         }
         // if keys are unique, then we can (and must) avoid comparing the values, since they may be non-comparable
-        // (e.g. in the case of an ObjectStore)
+        // (e.g. in the case of an ObjectStore, they are record objects)
         return this._keysAreUnique ? 0 : cmp(a.value, b.value);
     }
 
