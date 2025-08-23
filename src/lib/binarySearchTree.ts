@@ -2,6 +2,7 @@ import { Record } from "./types.js";
 import cmp from "./cmp.js";
 import FDBKeyRange from "../FDBKeyRange.js";
 
+// only a maximum of 2/3 of the total number of nodes are allowed to be deleted tombstones
 const MAX_TOMBSTONE_FACTOR = 2 / 3;
 
 const EVERYTHING_KEY_RANGE = new FDBKeyRange(
@@ -165,8 +166,8 @@ export default class BinarySearchTree {
         if (this._numTombstones > this._numNodes * MAX_TOMBSTONE_FACTOR) {
             // to keep the implementation simple, and because most users of fake-indexeddb are not going to be deleting
             // a lot of nodes, just rebuild the whole tree (defragment) if the tree is too full of tombstones,
-            // inspired by the scapegoat tree: https://en.wikipedia.org/wiki/Scapegoat_tree#Deletion
-            const records = this.getAllRecords();
+            // as inspired by the scapegoat tree: https://en.wikipedia.org/wiki/Scapegoat_tree#Deletion
+            const records = [...this.getAllRecords()];
             this._root = this._rebuild(records, undefined, false);
             this._numNodes = records.length;
             this._numTombstones = 0;
@@ -188,24 +189,30 @@ export default class BinarySearchTree {
         }
     }
 
-    getAllRecords(): Record[] {
-        return this.getRecords(EVERYTHING_KEY_RANGE);
+    *getAllRecords(descending: boolean = false) {
+        yield* this.getRecords(EVERYTHING_KEY_RANGE, descending);
     }
 
-    getRecords(keyRange: FDBKeyRange): Record[] {
-        return this._getRecordsForNode(this._root, keyRange);
+    *getRecords(keyRange: FDBKeyRange, descending: boolean = false) {
+        yield* this._getRecordsForNode(this._root, keyRange, descending);
     }
 
-    private _getRecordsForNode(node: Node | undefined, keyRange: FDBKeyRange) {
+    private *_getRecordsForNode(
+        node: Node | undefined,
+        keyRange: FDBKeyRange,
+        descending: boolean = false,
+    ) {
         if (!node) {
-            return [];
+            return;
         }
-        const result: Record[] = [];
-        this._findRecords(node, keyRange, result);
-        return result;
+        yield* this._findRecords(node, keyRange, descending);
     }
 
-    private _findRecords(node: Node, keyRange: FDBKeyRange, result: Record[]) {
+    private *_findRecords(
+        node: Node,
+        keyRange: FDBKeyRange,
+        descending: boolean = false,
+    ): Generator<Record> {
         const { lower, upper, lowerOpen, upperOpen } = keyRange;
         const {
             record: { key },
@@ -228,16 +235,28 @@ export default class BinarySearchTree {
             ? upperComparison > 0
             : upperComparison >= 0;
 
-        if (goLeft && node.left) {
-            this._findRecords(node.left, keyRange, result);
+        if (descending) {
+            if (goRight && node.right) {
+                yield* this._findRecords(node.right, keyRange, descending);
+            }
+        } else {
+            if (goLeft && node.left) {
+                yield* this._findRecords(node.left, keyRange, descending);
+            }
         }
 
         if (lowerMatches && upperMatches && !node.deleted) {
-            result.push(node.record);
+            yield node.record;
         }
 
-        if (goRight && node.right) {
-            this._findRecords(node.right, keyRange, result);
+        if (descending) {
+            if (goLeft && node.left) {
+                yield* this._findRecords(node.left, keyRange, descending);
+            }
+        } else {
+            if (goRight && node.right) {
+                yield* this._findRecords(node.right, keyRange, descending);
+            }
         }
     }
 

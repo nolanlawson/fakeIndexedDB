@@ -12,7 +12,7 @@ class RecordStore {
 
     public get(key: Key | FDBKeyRange) {
         const range = key instanceof FDBKeyRange ? key : FDBKeyRange.only(key);
-        return this.records.getRecords(range)[0];
+        return [...this.records.getRecords(range)][0];
     }
 
     public add(newRecord: Record) {
@@ -34,11 +34,11 @@ class RecordStore {
     public deleteByValue(key: Key | FDBKeyRange) {
         const range = key instanceof FDBKeyRange ? key : FDBKeyRange.only(key);
 
-        const deletedRecords: Record[] = this.records
-            .getAllRecords()
-            .filter((record) => {
-                return range.includes(record.value);
-            });
+        const deletedRecords: Record[] = [
+            ...this.records.getAllRecords(),
+        ].filter((record) => {
+            return range.includes(record.value);
+        });
 
         for (const record of deletedRecords) {
             this.records.delete(record);
@@ -55,8 +55,8 @@ class RecordStore {
 
     public values(range?: FDBKeyRange, direction: FDBCursorDirection = "next") {
         const records = range
-            ? this.records.getRecords(range)
-            : this.records.getAllRecords();
+            ? [...this.records.getRecords(range)]
+            : [...this.records.getAllRecords()];
 
         if (direction === "prev" || direction === "prevunique") {
             records.reverse();
