@@ -15,14 +15,15 @@ export function defineEventHandlerIDLAttribute<
                 if (wrapper !== null) {
                     this.removeEventListener(eventName, wrapper);
                 }
+                value = null;
                 wrapper = null;
             } else {
+                value = newValue;
                 if (wrapper === null) {
                     wrapper = (...args) => value!.apply(this, args);
                     this.addEventListener(eventName, wrapper);
                 }
             }
-            value = newValue;
         },
         configurable: true,
         enumerable: true,
