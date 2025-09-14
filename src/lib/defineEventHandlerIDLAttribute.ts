@@ -5,22 +5,16 @@ export function defineEventHandlerIDLAttribute<
 >(target: T, name: N) {
     const eventName = name.substring(2); // remove leading 'on'
     let value: EventListener | null = null;
-    let wrapper: EventListener | null = null;
     Object.defineProperty(target, name, {
         get() {
             return value;
         },
         set(newValue: EventListener | null) {
-            if (newValue === null || newValue === undefined) {
-                if (wrapper !== null) {
-                    this.removeEventListener(eventName, wrapper);
-                }
-                wrapper = null;
-            } else {
-                if (wrapper === null) {
-                    wrapper = (...args) => value!.apply(this, args);
-                    this.addEventListener(eventName, wrapper);
-                }
+            if (value === null || value === undefined) {
+                this.removeEventListener(eventName, value);
+            }
+            if (newValue !== null && newValue !== undefined) {
+                this.addEventListener(eventName, newValue);
             }
             value = newValue;
         },
