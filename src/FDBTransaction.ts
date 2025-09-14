@@ -9,6 +9,8 @@ import {
 import FakeDOMStringList from "./lib/FakeDOMStringList.js";
 import { queueTask } from "./lib/scheduling.js";
 import { defineEventHandlerIDLAttribute } from "./lib/defineEventHandlerIDLAttribute.js";
+import { dispatchBubblingEvent } from "./lib/dispatchBubblingEvent.js";
+import FakeEvent from "./lib/FakeEvent.js";
 import type FDBDatabase from "./FDBDatabase.js";
 import type {
     FDBTransactionDurability,
@@ -75,21 +77,21 @@ class FDBTransaction extends EventTarget {
                     request.result = undefined;
                     request.error = new AbortError();
 
-                    const event = new Event("error", {
+                    const event = new FakeEvent("error", {
                         bubbles: true,
                         cancelable: true,
                     });
-                    request.dispatchEvent(event);
+                    dispatchBubblingEvent(request, event, [this.db, this]);
                 }
             }
         }
 
         queueTask(() => {
-            const event = new Event("abort", {
+            const event = new FakeEvent("abort", {
                 bubbles: true,
                 cancelable: false,
             });
-            this.dispatchEvent(event);
+            dispatchBubblingEvent(this, event, [this.db]);
         });
 
         this._state = "finished";
@@ -191,7 +193,7 @@ class FDBTransaction extends EventTarget {
                     if (this._state === "inactive") {
                         this._state = "active";
                     }
-                    event = new Event("success", {
+                    event = new FakeEvent("success", {
                         bubbles: false,
                         cancelable: false,
                     });
@@ -204,7 +206,7 @@ class FDBTransaction extends EventTarget {
                     if (this._state === "inactive") {
                         this._state = "active";
                     }
-                    event = new Event("error", {
+                    event = new FakeEvent("error", {
                         bubbles: true,
                         cancelable: true,
                     });
@@ -213,7 +215,7 @@ class FDBTransaction extends EventTarget {
                 }
 
                 try {
-                    request.dispatchEvent(event);
+                    dispatchBubblingEvent(request, event, [this.db, this]);
                 } catch (err) {
                     if (this._state !== "committing") {
                         this._abort("AbortError");
@@ -222,8 +224,10 @@ class FDBTransaction extends EventTarget {
                 }
 
                 // Default action of event
-                if (defaultAction) {
-                    defaultAction();
+                if (!event.canceled) {
+                    if (defaultAction) {
+                        defaultAction();
+                    }
                 }
             }
 
@@ -238,7 +242,7 @@ class FDBTransaction extends EventTarget {
             this._state = "finished";
 
             if (!this.error) {
-                const event = new Event("complete");
+                const event = new FakeEvent("complete");
                 this.dispatchEvent(event);
             }
         }
