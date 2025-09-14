@@ -7,12 +7,10 @@ import {
     TransactionInactiveError,
 } from "./lib/errors.js";
 import FakeDOMStringList from "./lib/FakeDOMStringList.js";
-import FakeEvent from "./lib/FakeEvent.js";
-import FakeEventTarget from "./lib/FakeEventTarget.js";
 import { queueTask } from "./lib/scheduling.js";
+import { defineEventHandlerIDLAttribute } from "./lib/defineEventHandlerIDLAttribute.js";
 import type FDBDatabase from "./FDBDatabase.js";
 import type {
-    EventCallback,
     FDBTransactionDurability,
     RequestObj,
     RollbackLog,
@@ -20,7 +18,7 @@ import type {
 } from "./lib/types.js";
 
 // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#transaction
-class FDBTransaction extends FakeEventTarget {
+class FDBTransaction extends EventTarget {
     public _state: "active" | "inactive" | "committing" | "finished" = "active";
     public _started = false;
     public _rollbackLog: RollbackLog = [];
@@ -31,9 +29,9 @@ class FDBTransaction extends FakeEventTarget {
     public durability: FDBTransactionDurability;
     public db: FDBDatabase;
     public error: Error | null = null;
-    public onabort: EventCallback | null = null;
-    public oncomplete: EventCallback | null = null;
-    public onerror: EventCallback | null = null;
+    public onabort!: EventListener | null;
+    public oncomplete!: EventListener | null;
+    public onerror!: EventListener | null;
 
     public _scope: Set<string>;
     private _requests: {
@@ -77,22 +75,20 @@ class FDBTransaction extends FakeEventTarget {
                     request.result = undefined;
                     request.error = new AbortError();
 
-                    const event = new FakeEvent("error", {
+                    const event = new Event("error", {
                         bubbles: true,
                         cancelable: true,
                     });
-                    event.eventPath = [this.db, this];
                     request.dispatchEvent(event);
                 }
             }
         }
 
         queueTask(() => {
-            const event = new FakeEvent("abort", {
+            const event = new Event("abort", {
                 bubbles: true,
                 cancelable: false,
             });
-            event.eventPath = [this.db];
             this.dispatchEvent(event);
         });
 
@@ -195,7 +191,7 @@ class FDBTransaction extends FakeEventTarget {
                     if (this._state === "inactive") {
                         this._state = "active";
                     }
-                    event = new FakeEvent("success", {
+                    event = new Event("success", {
                         bubbles: false,
                         cancelable: false,
                     });
@@ -208,7 +204,7 @@ class FDBTransaction extends FakeEventTarget {
                     if (this._state === "inactive") {
                         this._state = "active";
                     }
-                    event = new FakeEvent("error", {
+                    event = new Event("error", {
                         bubbles: true,
                         cancelable: true,
                     });
@@ -217,7 +213,6 @@ class FDBTransaction extends FakeEventTarget {
                 }
 
                 try {
-                    event.eventPath = [this.db, this];
                     request.dispatchEvent(event);
                 } catch (err) {
                     if (this._state !== "committing") {
@@ -227,10 +222,8 @@ class FDBTransaction extends FakeEventTarget {
                 }
 
                 // Default action of event
-                if (!event.canceled) {
-                    if (defaultAction) {
-                        defaultAction();
-                    }
+                if (defaultAction) {
+                    defaultAction();
                 }
             }
 
@@ -245,7 +238,7 @@ class FDBTransaction extends FakeEventTarget {
             this._state = "finished";
 
             if (!this.error) {
-                const event = new FakeEvent("complete");
+                const event = new Event("complete");
                 this.dispatchEvent(event);
             }
         }
@@ -263,5 +256,9 @@ class FDBTransaction extends FakeEventTarget {
         return "IDBTransaction";
     }
 }
+
+defineEventHandlerIDLAttribute(FDBTransaction.prototype, "onabort");
+defineEventHandlerIDLAttribute(FDBTransaction.prototype, "oncomplete");
+defineEventHandlerIDLAttribute(FDBTransaction.prototype, "onerror");
 
 export default FDBTransaction;

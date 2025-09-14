@@ -1,13 +1,16 @@
 import FDBRequest from "./FDBRequest.js";
-import type { EventCallback } from "./lib/types.js";
+import { defineEventHandlerIDLAttribute } from "./lib/defineEventHandlerIDLAttribute.js";
 
 class FDBOpenDBRequest extends FDBRequest {
-    public onupgradeneeded: EventCallback | null = null;
-    public onblocked: EventCallback | null = null;
+    public onupgradeneeded!: EventListener | null;
+    public onblocked!: EventListener | null;
 
     get [Symbol.toStringTag]() {
         return "IDBOpenDBRequest";
     }
 }
+
+defineEventHandlerIDLAttribute(FDBOpenDBRequest.prototype, "onupgradeneeded");
+defineEventHandlerIDLAttribute(FDBOpenDBRequest.prototype, "onblocked");
 
 export default FDBOpenDBRequest;

@@ -1,4 +1,3 @@
-import FakeEvent from "./FakeEvent.js";
 import { queueTask } from "./scheduling.js";
 import type FDBDatabase from "../FDBDatabase.js";
 
@@ -19,11 +18,10 @@ const closeConnection = (connection: FDBDatabase, forced: boolean = false) => {
                 return connection !== otherConnection;
             });
         if (forced) {
-            const event = new FakeEvent("close", {
+            const event = new Event("close", {
                 bubbles: false,
                 cancelable: false,
             });
-            event.eventPath = [];
             connection.dispatchEvent(event);
         }
     } else {

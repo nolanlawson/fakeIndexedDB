@@ -7,7 +7,6 @@ import {
     TransactionInactiveError,
 } from "./lib/errors.js";
 import FakeDOMStringList from "./lib/FakeDOMStringList.js";
-import FakeEventTarget from "./lib/FakeEventTarget.js";
 import ObjectStore from "./lib/ObjectStore.js";
 import validateKeyPath from "./lib/validateKeyPath.js";
 import closeConnection from "./lib/closeConnection.js";
@@ -41,7 +40,7 @@ const confirmActiveVersionchangeTransaction = (database: FDBDatabase) => {
 };
 
 // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#database-interface
-class FDBDatabase extends FakeEventTarget {
+class FDBDatabase extends EventTarget {
     public _closePending = false;
     public _closed = false;
     public _runningVersionchangeTransaction = false;

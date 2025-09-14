@@ -1,6 +1,4 @@
-import FakeEvent from "./lib/FakeEvent.js";
-
-class FDBVersionChangeEvent extends FakeEvent {
+class FDBVersionChangeEvent extends Event {
     public newVersion: number | null;
     public oldVersion: number;
 

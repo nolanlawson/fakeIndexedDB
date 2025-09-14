@@ -5,7 +5,6 @@ import cmp from "./lib/cmp.js";
 import Database from "./lib/Database.js";
 import enforceRange from "./lib/enforceRange.js";
 import { AbortError, VersionError } from "./lib/errors.js";
-import FakeEvent from "./lib/FakeEvent.js";
 import { queueTask } from "./lib/scheduling.js";
 
 const waitForOthersClosedDelete = (
@@ -238,11 +237,10 @@ class FDBFactory {
                     request.error = new DOMException(err.message, err.name);
                     request.readyState = "done";
 
-                    const event = new FakeEvent("error", {
+                    const event = new Event("error", {
                         bubbles: true,
                         cancelable: true,
                     });
-                    event.eventPath = [];
                     request.dispatchEvent(event);
 
                     return;
@@ -289,11 +287,10 @@ class FDBFactory {
 
                         request.error = new DOMException(err.message, err.name);
 
-                        const event = new FakeEvent("error", {
+                        const event = new Event("error", {
                             bubbles: true,
                             cancelable: true,
                         });
-                        event.eventPath = [];
                         request.dispatchEvent(event);
 
                         return;
@@ -302,8 +299,7 @@ class FDBFactory {
                     request.result = connection;
                     request.readyState = "done";
 
-                    const event2 = new FakeEvent("success");
-                    event2.eventPath = [];
+                    const event2 = new Event("success");
                     request.dispatchEvent(event2);
                 },
             );
