@@ -167,14 +167,22 @@ const runVersionchangeTransaction = (
             didThrow = true;
         }
 
-        // If transaction’s state is active, then:
-        if (transaction._state === "active") {
-            // Set transaction’s state to inactive.
-            transaction._state = "inactive";
-            // If didThrow is true, run abort a transaction with transaction and a newly created "AbortError" DOMException.
-            if (didThrow) {
+        if (didThrow) {
+            // If transaction’s state is active, then:
+            if (transaction._state === "active") {
+                // Set transaction’s state to inactive.
+                transaction._state = "inactive";
+                // If didThrow is true, run abort a transaction with transaction and a newly created "AbortError" DOMException.
                 transaction._abort("AbortError");
             }
+        } else {
+            queueTask(() => {
+                // If transaction’s state is active, then:
+                if (transaction._state === "active") {
+                    // Set transaction’s state to inactive.
+                    transaction._state = "inactive";
+                }
+            });
         }
 
         transaction.addEventListener("error", () => {
