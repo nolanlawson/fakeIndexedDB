@@ -256,7 +256,6 @@ function createDetachedArrayBuffer() {
 }
 
 
-(function () {
 
 
 function load_iframe() {
@@ -276,5 +275,3 @@ promise_test(async t => {
     assert_equals(typeof openRequest.readyState, 'string');
 }, 'readyState accessor is valid after execution context is destroyed');
 
-
-})();

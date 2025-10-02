@@ -373,7 +373,6 @@ function timeoutPromise(ms) {
 }
 
 
-(function () {
 
 'use strict';
 
@@ -505,5 +504,3 @@ for (const databaseKind of ['open', 'closed']) {
     }, `${databaseKind} database names don't leak to cross-origin ${mode}`);
   }
 }
-
-})();
