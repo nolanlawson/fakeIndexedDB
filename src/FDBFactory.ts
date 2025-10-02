@@ -167,22 +167,26 @@ const runVersionchangeTransaction = (
             didThrow = true;
         }
 
-        if (didThrow) {
+        const concludeUpgrade = () => {
             // If transaction’s state is active, then:
             if (transaction._state === "active") {
                 // Set transaction’s state to inactive.
                 transaction._state = "inactive";
-                // If didThrow is true, run abort a transaction with transaction and a newly created "AbortError" DOMException.
-                transaction._abort("AbortError");
-            }
-        } else {
-            queueTask(() => {
-                // If transaction’s state is active, then:
-                if (transaction._state === "active") {
-                    // Set transaction’s state to inactive.
-                    transaction._state = "inactive";
+                if (didThrow) {
+                    // If didThrow is true, run abort a transaction with transaction and a newly created "AbortError" DOMException.
+                    transaction._abort("AbortError");
                 }
-            });
+            }
+        };
+
+        // The "upgrade a database" steps are supposed to run as a database task on the database access task source
+        // (i.e. off the main thread), but since we're actually running on the main thread, we have to be tricky:
+        // 1. If any `upgradeneeded` event handlers errored, abort synchronously
+        // 2. Else yield to allow any microtasks to run in response to that event
+        if (didThrow) {
+            concludeUpgrade();
+        } else {
+            queueTask(concludeUpgrade);
         }
 
         transaction.addEventListener("error", () => {
