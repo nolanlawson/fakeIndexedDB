@@ -1424,7 +1424,6 @@ function timeoutPromise(ms) {
 }
 
 
-(function () {
 
 let saw;
 indexeddb_test(
@@ -1442,5 +1441,3 @@ indexeddb_test(
         db.close();
     },
     'Deletes are processed in order');
-
-})();

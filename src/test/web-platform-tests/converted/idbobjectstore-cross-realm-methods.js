@@ -256,7 +256,6 @@ function createDetachedArrayBuffer() {
 }
 
 
-(function () {
 
 "use strict";
 const KEY_EXISTING_LOWER = 1000;
@@ -402,5 +401,3 @@ for (const testCase of testCases) {
         document.body.append(iframe);
     }, `Cross-realm IDBObjectStore::${testCase.methodName}() method from detached <iframe> works as expected`);
 }
-
-})();

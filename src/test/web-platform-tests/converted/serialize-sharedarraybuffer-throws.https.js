@@ -256,7 +256,6 @@ function createDetachedArrayBuffer() {
 }
 
 
-(function () {
 
   async_test(function(t) {
 
@@ -279,5 +278,3 @@ function createDetachedArrayBuffer() {
         t.done();
     };
   });
-
-})();
