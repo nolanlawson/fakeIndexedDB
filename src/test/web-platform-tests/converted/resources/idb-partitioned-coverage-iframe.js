@@ -1443,4 +1443,4 @@ indexeddb_test(
     },
     'Deletes are processed in order');
 
-})()
+})();

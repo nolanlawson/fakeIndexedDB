@@ -49,4 +49,4 @@ async_test(t => {
   }));
 }, "Simple test for partitioned IndexedDB");
 
-})()
+})();

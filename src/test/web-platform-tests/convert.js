@@ -93,7 +93,7 @@ const outFolder = path.posix.join(__dirname, "converted");
         }
 
         // wrap in an IIFE to avoid some issues with redeclared variable names
-        codeChunks.push(`(function () {\n${testScript}\n})()`);
+        codeChunks.push(`(function () {\n${testScript}\n})();`);
 
         makeParentDir(dest);
 

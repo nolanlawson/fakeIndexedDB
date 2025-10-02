@@ -81,4 +81,4 @@ window.addEventListener("message", (e) => {
   }
 });
 
-})()
+})();

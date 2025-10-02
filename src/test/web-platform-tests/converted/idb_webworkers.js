@@ -281,4 +281,4 @@ function createDetachedArrayBuffer() {
         worker.postMessage(1);
     })
 
-})()
+})();

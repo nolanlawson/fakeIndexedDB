@@ -37,4 +37,4 @@ if (window.opener !== null) {
   window.opener.postMessage({ action: null, response: 'ready' }, '*');
 }
 
-})()
+})();

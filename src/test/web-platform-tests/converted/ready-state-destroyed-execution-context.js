@@ -277,4 +277,4 @@ promise_test(async t => {
 }, 'readyState accessor is valid after execution context is destroyed');
 
 
-})()
+})();

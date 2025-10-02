@@ -506,4 +506,4 @@ for (const databaseKind of ['open', 'closed']) {
   }
 }
 
-})()
+})();

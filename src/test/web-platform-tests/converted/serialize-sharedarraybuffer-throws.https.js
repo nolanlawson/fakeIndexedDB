@@ -280,4 +280,4 @@ function createDetachedArrayBuffer() {
     };
   });
 
-})()
+})();

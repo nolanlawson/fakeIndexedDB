@@ -660,4 +660,4 @@ promise_test(async testCase => {
 }, "Test to make sure that origins have separate locking schemes");
 
 
-})()
+})();

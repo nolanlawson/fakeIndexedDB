@@ -51,4 +51,4 @@ async function run() {
 
 run();
 
-})()
+})();

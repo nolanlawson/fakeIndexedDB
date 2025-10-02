@@ -424,4 +424,4 @@ promise_test(async (testCase) => {
 }, "Saves and loads back File objects from IndexedDB");
 
 
-})()
+})();

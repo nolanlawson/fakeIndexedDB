@@ -348,4 +348,4 @@ for (const testCase of testCases) {
     }, `Cross-realm IDBIndex::${testCase.methodName}() method from detached <iframe> works as expected`);
 }
 
-})()
+})();

@@ -77,4 +77,4 @@ window.addEventListener("message", (e) => {
   }
 });
 
-})()
+})();

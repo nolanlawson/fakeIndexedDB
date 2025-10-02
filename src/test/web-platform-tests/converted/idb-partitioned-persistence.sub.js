@@ -56,4 +56,4 @@ async_test(t => {
   iframe2.src = "http://{{hosts[alt][]}}:{{ports[http][0]}}/IndexedDB/resources/idb-partitioned-persistence-iframe.html";
 }, "Persistence test for partitioned IndexedDB");
 
-})()
+})();

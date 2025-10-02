@@ -403,4 +403,4 @@ for (const testCase of testCases) {
     }, `Cross-realm IDBObjectStore::${testCase.methodName}() method from detached <iframe> works as expected`);
 }
 
-})()
+})();

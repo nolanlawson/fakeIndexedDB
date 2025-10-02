@@ -103,4 +103,4 @@ promise_test(async t => {
                 'Promise should be rejected with SecurityError');
 }, 'IDBFactory.open() in data URL shared workers should throw SecurityError');
 
-})()
+})();
