@@ -2,6 +2,7 @@ import "../../wpt-env.js";
 
 let cursor,db,result,store,value;
 
+(function () {
 
 const dbName = "users";
 
@@ -75,3 +76,5 @@ window.addEventListener("message", (e) => {
     });
   }
 });
+
+})()

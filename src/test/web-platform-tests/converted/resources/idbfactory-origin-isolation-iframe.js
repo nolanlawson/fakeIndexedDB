@@ -2,6 +2,7 @@ import "../../wpt-env.js";
 
 let cursor,db,result,store,value;
 
+(function () {
 
 
 // Keeps the passed transaction alive indefinitely (by making requests
@@ -49,3 +50,5 @@ async function run() {
 }
 
 run();
+
+})()

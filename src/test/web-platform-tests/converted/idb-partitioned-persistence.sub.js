@@ -2,6 +2,7 @@ import "../wpt-env.js";
 
 let cursor,db,result,store,value;
 
+(function () {
 
 // Here's the set-up for this test:
 // Step 1. (window) set up listeners for main window.
@@ -54,3 +55,5 @@ async_test(t => {
   iframe1.src = "http://{{hosts[alt][]}}:{{ports[http][0]}}/IndexedDB/resources/idb-partitioned-persistence-iframe.html";
   iframe2.src = "http://{{hosts[alt][]}}:{{ports[http][0]}}/IndexedDB/resources/idb-partitioned-persistence-iframe.html";
 }, "Persistence test for partitioned IndexedDB");
+
+})()

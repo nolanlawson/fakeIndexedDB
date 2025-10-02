@@ -373,6 +373,7 @@ function timeoutPromise(ms) {
 }
 
 
+(function () {
 
 
 function assert_file_metadata_equal(file1, file2) {
@@ -422,3 +423,5 @@ promise_test(async (testCase) => {
   db.close();
 }, "Saves and loads back File objects from IndexedDB");
 
+
+})()

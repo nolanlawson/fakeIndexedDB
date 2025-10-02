@@ -627,6 +627,7 @@ function timeoutPromise(ms) {
 }
 
 
+(function () {
 
 
 var host_info = get_host_info();
@@ -658,3 +659,5 @@ promise_test(async testCase => {
   request.onerror = testCase.unreached_func("There should be no errors.");
 }, "Test to make sure that origins have separate locking schemes");
 
+
+})()
