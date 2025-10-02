@@ -256,6 +256,7 @@ function createDetachedArrayBuffer() {
 }
 
 
+(function () {
 
 "use strict";
 const INDEX_LOWER = 1000;
@@ -346,3 +347,5 @@ for (const testCase of testCases) {
         document.body.append(iframe);
     }, `Cross-realm IDBIndex::${testCase.methodName}() method from detached <iframe> works as expected`);
 }
+
+})();

@@ -2,6 +2,7 @@ import "../wpt-env.js";
 
 let cursor,db,result,store,value;
 
+(function () {
 
 
 function load_iframe(src, sandbox) {
@@ -101,3 +102,5 @@ promise_test(async t => {
   assert_equals(message.result, 'SecurityError',
                 'Promise should be rejected with SecurityError');
 }, 'IDBFactory.open() in data URL shared workers should throw SecurityError');
+
+})();

@@ -256,6 +256,7 @@ function createDetachedArrayBuffer() {
 }
 
 
+(function () {
 
     var db, count = 0,
       t = async_test();
@@ -279,3 +280,5 @@ function createDetachedArrayBuffer() {
 
         worker.postMessage(1);
     })
+
+})();

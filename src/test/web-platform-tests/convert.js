@@ -92,12 +92,7 @@ const outFolder = path.posix.join(__dirname, "converted");
             codeChunks.push(fs.readFileSync(location) + "\n");
         }
 
-        // wrap in an IIFE to avoid some issues with a redeclared variable name
-        if (filename.includes('transaction-lifetime-empty.any.js')) {
-            codeChunks.push(`(function () {\n${testScript}\n})();`);
-        } else {
-            codeChunks.push(testScript);
-        }
+        codeChunks.push(`(function () {\n${testScript}\n})();`);
 
         makeParentDir(dest);
 

@@ -2,6 +2,7 @@ import "../../wpt-env.js";
 
 let cursor,db,result,store,value;
 
+(function () {
 
 'use strict';
 
@@ -35,3 +36,5 @@ self.addEventListener('message', async event => {
 if (window.opener !== null) {
   window.opener.postMessage({ action: null, response: 'ready' }, '*');
 }
+
+})();
