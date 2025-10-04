@@ -515,12 +515,15 @@ describe("fakeIndexedDB Tests", () => {
         const name = `test${Math.random()}`;
 
         const openDb = (cb?: (db: FDBDatabase) => void) => {
+            console.log(`#${cb ? "2" : "1"}: opendb`);
             const request = fakeIndexedDB.open(name, 3);
             request.onupgradeneeded = () => {
+                console.log(`#${cb ? "2" : "1"}: onupgradeneeded`);
                 const db = request.result;
                 db.createObjectStore("books", { keyPath: "isbn" });
             };
             request.onsuccess = (event) => {
+                console.log(`#${cb ? "2" : "1"}: onsuccess`);
                 const db: FDBDatabase = event.target.result;
                 if (cb) {
                     cb(db);
