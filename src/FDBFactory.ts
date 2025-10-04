@@ -12,6 +12,12 @@ import type { FDBDatabaseInfo } from "./lib/types.js";
 // Use a chain of Promises as a lightweight FIFO task queue
 const connectionQueues = new Map<string, Promise<void>>();
 
+// https://w3c.github.io/IndexedDB/#connection-queue
+const runTaskInConnectionQueue = (name: string, task: () => Promise<void>) => {
+    const queue = connectionQueues.get(name) ?? Promise.resolve();
+    connectionQueues.set(name, queue.then(task));
+};
+
 const waitForOthersClosedDelete = (
     databases: Map<string, Database>,
     name: string,
@@ -34,52 +40,75 @@ const waitForOthersClosedDelete = (
     cb(null);
 };
 
-// http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#dfn-steps-for-deleting-a-database
+// https://w3c.github.io/IndexedDB/#delete-a-database
 const deleteDatabase = (
     databases: Map<string, Database>,
     name: string,
     request: FDBOpenDBRequest,
     cb: (err: Error | null) => void,
 ) => {
-    try {
-        const db = databases.get(name);
-        if (db === undefined) {
-            cb(null);
-            return;
-        }
+    const deleteDBTask = () => {
+        return new Promise<void>((resolve) => {
+            const onComplete = (err: Error | null) => {
+                try {
+                    cb(err);
+                } finally {
+                    resolve();
+                }
+            };
 
-        db.deletePending = true;
+            try {
+                const db = databases.get(name);
+                if (db === undefined) {
+                    onComplete(null);
+                    return;
+                }
 
-        const openDatabases = db.connections.filter((connection) => {
-            return !connection._closed && !connection._closePending;
-        });
+                db.deletePending = true;
 
-        for (const openDatabase2 of openDatabases) {
-            if (!openDatabase2._closePending) {
-                const event = new FDBVersionChangeEvent("versionchange", {
-                    newVersion: null,
-                    oldVersion: db.version,
+                const openDatabases = db.connections.filter((connection) => {
+                    return !connection._closed && !connection._closePending;
                 });
-                openDatabase2.dispatchEvent(event);
+
+                for (const openDatabase2 of openDatabases) {
+                    if (!openDatabase2._closePending) {
+                        const event = new FDBVersionChangeEvent(
+                            "versionchange",
+                            {
+                                newVersion: null,
+                                oldVersion: db.version,
+                            },
+                        );
+                        openDatabase2.dispatchEvent(event);
+                    }
+                }
+
+                const anyOpen = openDatabases.some((openDatabase3) => {
+                    return (
+                        !openDatabase3._closed && !openDatabase3._closePending
+                    );
+                });
+
+                if (request && anyOpen) {
+                    const event = new FDBVersionChangeEvent("blocked", {
+                        newVersion: null,
+                        oldVersion: db.version,
+                    });
+                    request.dispatchEvent(event);
+                }
+
+                waitForOthersClosedDelete(
+                    databases,
+                    name,
+                    openDatabases,
+                    onComplete,
+                );
+            } catch (err) {
+                onComplete(err);
             }
-        }
-
-        const anyOpen = openDatabases.some((openDatabase3) => {
-            return !openDatabase3._closed && !openDatabase3._closePending;
         });
-
-        if (request && anyOpen) {
-            const event = new FDBVersionChangeEvent("blocked", {
-                newVersion: null,
-                oldVersion: db.version,
-            });
-            request.dispatchEvent(event);
-        }
-
-        waitForOthersClosedDelete(databases, name, openDatabases, cb);
-    } catch (err) {
-        cb(err);
-    }
+    };
+    runTaskInConnectionQueue(name, deleteDBTask);
 };
 
 // https://w3c.github.io/IndexedDB/#ref-for-database-version%E2%91%A0%E2%91%A2
@@ -301,11 +330,9 @@ const openDatabase = (
 
     // Let queue be the connection queue for storageKey and name.
     // (note FakeIndexedDB does not support storageKeys currently)
-    const queue = connectionQueues.get(name) ?? Promise.resolve();
-
     // Add request to queue.
     // Wait until all previous requests in queue have been processed.
-    connectionQueues.set(name, queue.then(openDBTask));
+    runTaskInConnectionQueue(name, openDBTask);
 };
 
 class FDBFactory {
