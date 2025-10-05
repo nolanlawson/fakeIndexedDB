@@ -24,11 +24,9 @@ const waitForOthersClosedDelete = (
     openDatabases: FDBDatabase[],
     cb: (err: Error | null) => void,
 ) => {
-    console.log("waitForOthersClosedDelete");
     const anyOpen = openDatabases.some((openDatabase2) => {
         return !openDatabase2._closed && !openDatabase2._closePending;
     });
-    console.log("openDatabases", { openDatabases });
 
     if (anyOpen) {
         queueTask(() =>
@@ -37,7 +35,6 @@ const waitForOthersClosedDelete = (
         return;
     }
 
-    console.log("deleting database", name);
     databases.delete(name);
 
     cb(null);
@@ -51,7 +48,6 @@ const deleteDatabase = (
     cb: (err: Error | null) => void,
 ) => {
     const deleteDBTask = () => {
-        console.log("deleteDBTask");
         return new Promise<void>((resolve) => {
             const onComplete = (err: Error | null) => {
                 try {
@@ -72,7 +68,6 @@ const deleteDatabase = (
                 const openConnections = db.connections.filter((connection) => {
                     return !connection._closed;
                 });
-                console.log({ openConnections });
 
                 // For each entry of openConnections that does not have its close pending flag set to true, queue a
                 // database task to fire a version change event named versionchange at entry with db’s version and null.
@@ -298,7 +293,6 @@ const openDatabase = (
     cb: (err: Error | null, connection?: FDBDatabase) => void,
 ) => {
     const openDBTask = () => {
-        console.log("openDBTask");
         return new Promise<void>((resolve) => {
             const onComplete = (err: Error | null) => {
                 try {
@@ -365,7 +359,6 @@ class FDBFactory {
 
     // https://w3c.github.io/IndexedDB/#dom-idbfactory-deletedatabase
     public deleteDatabase(name: string) {
-        console.log("deleteDatabase");
         const request = new FDBOpenDBRequest();
         request.source = null;
 
@@ -404,7 +397,6 @@ class FDBFactory {
 
     // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#widl-IDBFactory-open-IDBOpenDBRequest-DOMString-name-unsigned-long-long-version
     public open(name: string, version?: number) {
-        console.log("open");
         if (arguments.length > 1 && version !== undefined) {
             // Based on spec, not sure why "MAX_SAFE_INTEGER" instead of "unsigned long long", but it's needed to pass
             // tests
