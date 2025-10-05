@@ -98,7 +98,8 @@ class FDBTransaction extends FakeEventTarget {
             // If transaction is an upgrade transaction, then set transaction’s connection’s associated database’s
             // upgrade transaction to null.
             // (i.e. remove it from the list of `db.connections`)
-            if (this.mode === "versionchange") {
+            const isUpgradeTransaction = this.mode === "versionchange";
+            if (isUpgradeTransaction) {
                 this.db._rawDatabase.connections =
                     this.db._rawDatabase.connections.filter(
                         (connection) =>
@@ -114,7 +115,14 @@ class FDBTransaction extends FakeEventTarget {
             });
             event.eventPath = [this.db];
             this.dispatchEvent(event);
-            //
+
+            // TODO
+            // If transaction is an upgrade transaction, then:
+            // Let request be the open request associated with transaction.
+            // Set request’s transaction to null.
+            // Set request’s result to undefined.
+            // Set request’s processed flag to false.
+            // Set request’s done flag to false.
         });
 
         this._state = "finished";
