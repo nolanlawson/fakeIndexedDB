@@ -18,7 +18,7 @@ import type {
     RollbackLog,
     TransactionMode,
 } from "./lib/types.js";
-import FDBOpenDBRequest from "./FDBOpenDBRequest";
+import type FDBOpenDBRequest from "./FDBOpenDBRequest.js";
 
 // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#transaction
 class FDBTransaction extends FakeEventTarget {
