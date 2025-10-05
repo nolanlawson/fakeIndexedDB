@@ -25,7 +25,7 @@ const waitForOthersClosedDelete = (
     cb: (err: Error | null) => void,
 ) => {
     console.log("waitForOthersClosedDelete");
-    const anyOpen = openDatabases.some((openDatabase2) => {
+    const anyOpen = openDatabases.filter((openDatabase2) => {
         return !openDatabase2._closed && !openDatabase2._closePending;
     });
     console.log("openDatabases", { openDatabases });
@@ -69,43 +69,60 @@ const deleteDatabase = (
 
                 db.deletePending = true;
 
-                const openDatabases = db.connections.filter((connection) => {
-                    return !connection._closed && !connection._closePending;
+                // Let openConnections be the set of all connections associated with db.
+                const openConnections = db.connections.filter((connection) => {
+                    return !connection._closed;
                 });
 
-                for (const openDatabase2 of openDatabases) {
+                // For each entry of openConnections that does not have its close pending flag set to true, queue a
+                // database task to fire a version change event named versionchange at entry with db’s version and null.
+                for (const openDatabase2 of openConnections) {
                     if (!openDatabase2._closePending) {
-                        const event = new FDBVersionChangeEvent(
-                            "versionchange",
-                            {
-                                newVersion: null,
-                                oldVersion: db.version,
-                            },
-                        );
-                        openDatabase2.dispatchEvent(event);
+                        queueTask(() => {
+                            const event = new FDBVersionChangeEvent(
+                                "versionchange",
+                                {
+                                    newVersion: null,
+                                    oldVersion: db.version,
+                                },
+                            );
+                            openDatabase2.dispatchEvent(event);
+                        });
                     }
                 }
 
-                const anyOpen = openDatabases.some((openDatabase3) => {
-                    return (
-                        !openDatabase3._closed && !openDatabase3._closePending
+                // Wait for all of the events to be fired. (i.e. queue a task)
+                queueTask(() => {
+                    // If any of the connections in openConnections are still not closed, queue a database task to
+                    // fire a version change event named blocked at request with db’s version and null.
+
+                    const anyOpen = openConnections.some((openDatabase3) => {
+                        return (
+                            !openDatabase3._closed &&
+                            !openDatabase3._closePending
+                        );
+                    });
+
+                    // If any of the connections in openConnections are still not closed, queue a database task to
+                    // fire a version change event named blocked at request with db’s version and null.
+                    if (request && anyOpen) {
+                        queueTask(() => {
+                            const event = new FDBVersionChangeEvent("blocked", {
+                                newVersion: null,
+                                oldVersion: db.version,
+                            });
+                            request.dispatchEvent(event);
+                        });
+                    }
+
+                    // Wait until all connections in openConnections are closed.
+                    waitForOthersClosedDelete(
+                        databases,
+                        name,
+                        openConnections,
+                        onComplete,
                     );
                 });
-
-                if (request && anyOpen) {
-                    const event = new FDBVersionChangeEvent("blocked", {
-                        newVersion: null,
-                        oldVersion: db.version,
-                    });
-                    request.dispatchEvent(event);
-                }
-
-                waitForOthersClosedDelete(
-                    databases,
-                    name,
-                    openDatabases,
-                    onComplete,
-                );
             } catch (err) {
                 onComplete(err);
             }
@@ -343,7 +360,7 @@ class FDBFactory {
     public cmp = cmp;
     private _databases: Map<string, Database> = new Map();
 
-    // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#widl-IDBFactory-deleteDatabase-IDBOpenDBRequest-DOMString-name
+    // https://w3c.github.io/IndexedDB/#dom-idbfactory-deletedatabase
     public deleteDatabase(name: string) {
         console.log("deleteDatabase");
         const request = new FDBOpenDBRequest();
