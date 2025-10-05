@@ -45,13 +45,20 @@ const deleteDatabase = (
     databases: Map<string, Database>,
     name: string,
     request: FDBOpenDBRequest,
-    cb: (err: Error | null) => void,
+    cb: (err: Error | null, oldVersion?: number) => void,
 ) => {
     const deleteDBTask = () => {
         return new Promise<void>((resolve) => {
+            const db = databases.get(name);
+            const oldVersion = db !== undefined ? db.version : 0;
+
             const onComplete = (err: Error | null) => {
                 try {
-                    cb(err);
+                    if (err) {
+                        cb(err);
+                    } else {
+                        cb(null, oldVersion);
+                    }
                 } finally {
                     resolve();
                 }
@@ -363,33 +370,35 @@ class FDBFactory {
         request.source = null;
 
         queueTask(() => {
-            const db = this._databases.get(name);
-            const oldVersion = db !== undefined ? db.version : 0;
+            deleteDatabase(
+                this._databases,
+                name,
+                request,
+                (err, oldVersion) => {
+                    if (err) {
+                        request.error = new DOMException(err.message, err.name);
+                        request.readyState = "done";
 
-            deleteDatabase(this._databases, name, request, (err) => {
-                if (err) {
-                    request.error = new DOMException(err.message, err.name);
+                        const event = new FakeEvent("error", {
+                            bubbles: true,
+                            cancelable: true,
+                        });
+                        event.eventPath = [];
+                        request.dispatchEvent(event);
+
+                        return;
+                    }
+
+                    request.result = undefined;
                     request.readyState = "done";
 
-                    const event = new FakeEvent("error", {
-                        bubbles: true,
-                        cancelable: true,
+                    const event2 = new FDBVersionChangeEvent("success", {
+                        newVersion: null,
+                        oldVersion,
                     });
-                    event.eventPath = [];
-                    request.dispatchEvent(event);
-
-                    return;
-                }
-
-                request.result = undefined;
-                request.readyState = "done";
-
-                const event2 = new FDBVersionChangeEvent("success", {
-                    newVersion: null,
-                    oldVersion,
-                });
-                request.dispatchEvent(event2);
-            });
+                    request.dispatchEvent(event2);
+                },
+            );
         });
 
         return request;
