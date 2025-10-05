@@ -18,6 +18,7 @@ import type {
     RollbackLog,
     TransactionMode,
 } from "./lib/types.js";
+import FDBOpenDBRequest from "./FDBOpenDBRequest";
 
 // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#transaction
 class FDBTransaction extends FakeEventTarget {
@@ -25,6 +26,7 @@ class FDBTransaction extends FakeEventTarget {
     public _started = false;
     public _rollbackLog: RollbackLog = [];
     public _objectStoresCache: Map<string, FDBObjectStore> = new Map();
+    public _openRequest: FDBOpenDBRequest | null = null;
 
     public objectStoreNames: FakeDOMStringList;
     public mode: TransactionMode;
@@ -116,13 +118,17 @@ class FDBTransaction extends FakeEventTarget {
             event.eventPath = [this.db];
             this.dispatchEvent(event);
 
-            // TODO
             // If transaction is an upgrade transaction, then:
-            // Let request be the open request associated with transaction.
-            // Set request’s transaction to null.
-            // Set request’s result to undefined.
-            // Set request’s processed flag to false.
-            // Set request’s done flag to false.
+            if (isUpgradeTransaction) {
+                // Let request be the open request associated with transaction.
+                const request = this._openRequest!;
+                // Set request’s transaction to null.
+                request.transaction = null;
+                // Set request’s result to undefined.
+                request.result = undefined;
+                // TODO: Set request’s processed flag to false.
+                // TODO: Set request’s done flag to false.
+            }
         });
 
         this._state = "finished";

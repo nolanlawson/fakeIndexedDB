@@ -203,6 +203,9 @@ const runVersionchangeTransaction = (
                 "versionchange",
             );
 
+            // associate the transaction with the open request for later lookup
+            transaction._openRequest = request;
+
             // https://w3c.github.io/IndexedDB/#upgrade-a-database
             // Set request’s result to connection.
             request.result = connection;
