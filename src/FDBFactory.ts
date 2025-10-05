@@ -25,7 +25,7 @@ const waitForOthersClosedDelete = (
     cb: (err: Error | null) => void,
 ) => {
     console.log("waitForOthersClosedDelete");
-    const anyOpen = openDatabases.filter((openDatabase2) => {
+    const anyOpen = openDatabases.some((openDatabase2) => {
         return !openDatabase2._closed && !openDatabase2._closePending;
     });
     console.log("openDatabases", { openDatabases });
@@ -37,6 +37,7 @@ const waitForOthersClosedDelete = (
         return;
     }
 
+    console.log("deleting database", name);
     databases.delete(name);
 
     cb(null);
@@ -67,12 +68,11 @@ const deleteDatabase = (
                     return;
                 }
 
-                db.deletePending = true;
-
                 // Let openConnections be the set of all connections associated with db.
                 const openConnections = db.connections.filter((connection) => {
                     return !connection._closed;
                 });
+                console.log({ openConnections });
 
                 // For each entry of openConnections that does not have its close pending flag set to true, queue a
                 // database task to fire a version change event named versionchange at entry with db’s version and null.
@@ -105,7 +105,7 @@ const deleteDatabase = (
 
                     // If any of the connections in openConnections are still not closed, queue a database task to
                     // fire a version change event named blocked at request with db’s version and null.
-                    if (request && anyOpen) {
+                    if (anyOpen) {
                         queueTask(() => {
                             const event = new FDBVersionChangeEvent("blocked", {
                                 newVersion: null,

@@ -58,7 +58,7 @@ class FDBTransaction extends FakeEventTarget {
         );
     }
 
-    // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#dfn-steps-for-aborting-a-transaction
+    // https://w3c.github.io/IndexedDB/#abort-transaction
     public _abort(errName: string | null) {
         for (const f of this._rollbackLog.reverse()) {
             f();
@@ -93,13 +93,28 @@ class FDBTransaction extends FakeEventTarget {
             }
         }
 
+        // Queue a database task to run these steps:
         queueTask(() => {
+            // If transaction is an upgrade transaction, then set transaction’s connection’s associated database’s
+            // upgrade transaction to null.
+            // (i.e. remove it from the list of `db.connections`)
+            if (this.mode === "versionchange") {
+                this.db._rawDatabase.connections =
+                    this.db._rawDatabase.connections.filter(
+                        (connection) =>
+                            !connection._rawDatabase.transactions.includes(
+                                this,
+                            ),
+                    );
+            }
+            // Fire an event named abort at transaction with its bubbles attribute initialized to true.
             const event = new FakeEvent("abort", {
                 bubbles: true,
                 cancelable: false,
             });
             event.eventPath = [this.db];
             this.dispatchEvent(event);
+            //
         });
 
         this._state = "finished";
