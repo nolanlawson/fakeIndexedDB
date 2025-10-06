@@ -132,16 +132,6 @@ const addImportee = (filename, match, dest, codeChunks) => {
             codeChunks.push(`import "${relativeWptEnvLocation}";\n`);
         }
 
-        const titleMatches = [
-            ...testScript.matchAll(/\/\/\s*META:\s*title=(.+)$/gm),
-        ];
-        if (titleMatches.length) {
-            // some tests use `self.title` to create the test name
-            codeChunks.push(
-                `globalThis.title = ${JSON.stringify(titleMatches[0][1])};\n`,
-            );
-        }
-
         const importMatches = testScript
             .matchAll(/^\/\/\s*META:\s*script=(.+)$/gm)
             .filter(
@@ -154,6 +144,16 @@ const addImportee = (filename, match, dest, codeChunks) => {
 
         for (const [, match] of importMatches) {
             addImportee(filename, match, dest, codeChunks);
+        }
+
+        const titleMatches = [
+            ...testScript.matchAll(/\/\/\s*META:\s*title=(.+)$/gm),
+        ];
+        if (titleMatches.length) {
+            // some tests use `self.title` to create the test name
+            codeChunks.push(
+                `globalThis.title = ${JSON.stringify(titleMatches[0][1])};\n`,
+            );
         }
 
         // HACK: these tests don't need the sloppy mode fixes, and in fact already declare the relevant variables
