@@ -162,11 +162,11 @@ const outFolder = path.posix.join(__dirname, "converted");
                 path.posix.dirname(filename),
                 match[1],
             );
-            const relative = path.posix.relative(inFolder, source)
-            const target = path.posix.join(outFolder, relative)
-            const importee = `./${path.posix.relative(path.posix.dirname(dest), target)}`
-            fs.writeFileSync(target, fs.readFileSync(source, 'utf-8'))
-            codeChunks.push(`import "${importee}";\n`)
+            const relative = path.posix.relative(inFolder, source);
+            const target = path.posix.join(outFolder, relative);
+            const importee = `./${path.posix.relative(path.posix.dirname(dest), target)}`;
+            codeChunks.push(`import "${importee}";\n`);
+            fs.writeFileSync(target, fs.readFileSync(source, "utf-8"));
         }
 
         // HACK: this test re-declares the `expect` function, so wrap in an IIFE
