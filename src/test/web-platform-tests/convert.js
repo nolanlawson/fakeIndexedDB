@@ -24,6 +24,15 @@ const __dirname = "src/test/web-platform-tests";
 const inFolder = path.posix.join(__dirname, "IndexedDB");
 const outFolder = path.posix.join(__dirname, "converted");
 
+const addImportee = (filename, match, dest, codeChunks) => {
+    const source = path.posix.join(path.posix.dirname(filename), match);
+    const relative = path.posix.relative(inFolder, source);
+    const target = path.posix.join(outFolder, relative);
+    const importee = `./${path.posix.relative(path.posix.dirname(dest), target)}`;
+    codeChunks.push(`import "${importee}";\n`);
+    fs.writeFileSync(target, fs.readFileSync(source, "utf-8"));
+};
+
 {
     const filenames = glob.sync("/**/*.{htm,html}", { root: inFolder });
     for (const filename of filenames) {
@@ -71,7 +80,7 @@ const outFolder = path.posix.join(__dirname, "converted");
             /<script src=["']?(.+?)['"]?>/g,
         );
 
-        for (const match of importMatches) {
+        for (const [, match] of importMatches) {
             if (
                 [
                     "/resources/testharness.js",
@@ -81,15 +90,11 @@ const outFolder = path.posix.join(__dirname, "converted");
                     "/common/get-host-info.sub.js",
                     "../common/get-host-info.sub.js",
                     "/IndexedDB/idbindex_getAll.any.js",
-                ].includes(match[1])
+                ].includes(match)
             ) {
                 continue;
             }
-            const location = path.posix.join(
-                path.posix.dirname(filename),
-                match[1],
-            );
-            codeChunks.push(fs.readFileSync(location) + "\n");
+            addImportee(filename, match, dest, codeChunks);
         }
 
         codeChunks.push(testScript);
@@ -157,16 +162,8 @@ const outFolder = path.posix.join(__dirname, "converted");
                     ].includes(match[1]),
             );
 
-        for (const match of importMatches) {
-            const source = path.posix.join(
-                path.posix.dirname(filename),
-                match[1],
-            );
-            const relative = path.posix.relative(inFolder, source);
-            const target = path.posix.join(outFolder, relative);
-            const importee = `./${path.posix.relative(path.posix.dirname(dest), target)}`;
-            codeChunks.push(`import "${importee}";\n`);
-            fs.writeFileSync(target, fs.readFileSync(source, "utf-8"));
+        for (const [, match] of importMatches) {
+            addImportee(filename, match, dest, codeChunks);
         }
 
         // HACK: this test re-declares the `expect` function, so wrap in an IIFE
