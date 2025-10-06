@@ -42,6 +42,7 @@ function stringifyManifest(generatedManifest, comments) {
 
 let numExpectedFailures = 0;
 let numUnstableTests = 0;
+let numPassed = 0;
 
 for (const absFilename of filenames) {
     const filename = path.relative(testFolder, absFilename);
@@ -108,6 +109,7 @@ for (const absFilename of filenames) {
                         };
                         numUnstableTests += 1;
                     } else if (result.passed) {
+                        numPassed++
                         if (expectation === "FAIL") {
                             throw new Error(
                                 "Expected test to fail, but it passed",
@@ -151,4 +153,5 @@ process.on("beforeExit", () => {
     // log some additional diagnostics. not attempting to match `node:test`'s output since it varies by reporter
     console.log(`Expected failures: ${numExpectedFailures}`);
     console.log(`Unstable tests: ${numUnstableTests}`);
+    console.log(`Stable passed tests: ${numPassed}`)
 });
