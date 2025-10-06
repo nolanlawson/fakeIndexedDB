@@ -68,8 +68,6 @@ const addImportee = (filename, match, dest, codeChunks) => {
             codeChunks.push(`import "${relativeWptEnvLocation}";\n`);
         }
 
-        codeChunks.push(declareGlobalVars);
-
         // Because these are 'imported' with <script>, the support
         // scripts share a scope with the test script, and that's how
         // the utilities are accessed. The simplest way to emulate the
@@ -97,6 +95,7 @@ const addImportee = (filename, match, dest, codeChunks) => {
             addImportee(filename, match, dest, codeChunks);
         }
 
+        codeChunks.push(declareGlobalVars);
         codeChunks.push(testScript);
 
         makeParentDir(dest);
@@ -133,15 +132,6 @@ const addImportee = (filename, match, dest, codeChunks) => {
             codeChunks.push(`import "${relativeWptEnvLocation}";\n`);
         }
 
-        // HACK: these tests don't need the sloppy mode fixes, and in fact already declare the relevant variables
-        // so would fail with the fixes
-        if (
-            !filename.endsWith("/idbcursor-continue.any.js") &&
-            !filename.endsWith("/value.any.js")
-        ) {
-            codeChunks.push(declareGlobalVars);
-        }
-
         const titleMatches = [
             ...testScript.matchAll(/\/\/\s*META:\s*title=(.+)$/gm),
         ];
@@ -166,12 +156,16 @@ const addImportee = (filename, match, dest, codeChunks) => {
             addImportee(filename, match, dest, codeChunks);
         }
 
-        // HACK: this test re-declares the `expect` function, so wrap in an IIFE
-        if (filename.includes("transaction-lifetime-empty.any")) {
-            codeChunks.push(`(function () {\n${testScript}\n})();`);
-        } else {
-            codeChunks.push(testScript);
+        // HACK: these tests don't need the sloppy mode fixes, and in fact already declare the relevant variables
+        // so would fail with the fixes
+        if (
+            !filename.endsWith("/idbcursor-continue.any.js") &&
+            !filename.endsWith("/value.any.js")
+        ) {
+            codeChunks.push(declareGlobalVars);
         }
+
+        codeChunks.push(testScript);
 
         codeChunks = codeChunks.map((chunk) => {
             return (
