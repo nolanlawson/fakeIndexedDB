@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support-promises.js";
-
 globalThis.title = "IndexedDB: object store renaming support in aborted transactions";
-
 let cursor,db,result,store,value;
 
 // META: global=window,worker

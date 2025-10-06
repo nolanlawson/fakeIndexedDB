@@ -1,11 +1,7 @@
 import "../wpt-env.js";
-
 import "./resources/support-promises.js";
-
 import "./resources/interleaved-cursors-common.js";
-
 globalThis.title = "IndexedDB: Interleaved iteration of multiple cursors";
-
 let cursor,db,result,store,value;
 
 // META: title=IndexedDB: Interleaved iteration of multiple cursors

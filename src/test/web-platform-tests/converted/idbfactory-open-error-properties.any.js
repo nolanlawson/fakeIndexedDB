@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IndexedDB: Test IDBFactory open() error event properties";
-
 let cursor,db,result,store,value;
 
 // META: title=IndexedDB: Test IDBFactory open() error event properties

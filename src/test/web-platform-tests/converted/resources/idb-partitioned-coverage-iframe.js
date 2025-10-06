@@ -1,13 +1,8 @@
 import "../../wpt-env.js";
-
 import "./support.js";
-
 import "./nested-cloning-common.js";
-
 import "./support-get-all.js";
-
 import "./support-promises.js";
-
 let cursor,db,result,store,value;
 
 

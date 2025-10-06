@@ -1,11 +1,7 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 import "./resources/support-promises.js";
-
 globalThis.title = "Upgrade transaction deactivation timing";
-
 let cursor,db,result,store,value;
 
 // META: title=Upgrade transaction deactivation timing

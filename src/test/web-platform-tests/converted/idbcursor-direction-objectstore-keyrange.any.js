@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IDBCursor direction - object store with keyrange";
-
 let cursor,db,result,store,value;
 
 // META: global=window,worker

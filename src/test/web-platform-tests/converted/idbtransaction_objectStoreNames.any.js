@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IndexedDB: IDBTransaction.objectStoreNames attribute";
-
 let cursor,db,result,store,value;
 
 // META: title=IndexedDB: IDBTransaction.objectStoreNames attribute

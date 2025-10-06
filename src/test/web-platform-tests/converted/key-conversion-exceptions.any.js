@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IndexedDB: Exceptions thrown during key conversion";
-
 let cursor,db,result,store,value;
 
 // META: global=window,worker

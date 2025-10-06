@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support-promises.js";
-
 globalThis.title = "IndexedDB: ES bindings - Inject a key into a value - Keys bypass setters";
-
 let cursor,db,result,store,value;
 
 // META: global=window,worker

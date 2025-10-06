@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "Invalid keypath";
-
 let cursor,db,result,store,value;
 
 // META: global=window,worker

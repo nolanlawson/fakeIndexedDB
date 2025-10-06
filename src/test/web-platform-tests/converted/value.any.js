@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IndexedDB: keys and values";
-
 // META: global=window,worker
 // META: title=IndexedDB: keys and values
 // META: script=resources/support.js

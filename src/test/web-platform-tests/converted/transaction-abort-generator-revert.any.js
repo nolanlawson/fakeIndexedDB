@@ -1,11 +1,7 @@
 import "../wpt-env.js";
-
 import "./resources/support-promises.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IndexedDB: aborting transactions reverts an object store's key generator state";
-
 let cursor,db,result,store,value;
 
 // META: title=IndexedDB: aborting transactions reverts an object store's key generator state

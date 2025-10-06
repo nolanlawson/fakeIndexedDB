@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IndexedDB: Exceptions in extracting keys from values (ES bindings)";
-
 let cursor,db,result,store,value;
 
 // META: global=window,worker

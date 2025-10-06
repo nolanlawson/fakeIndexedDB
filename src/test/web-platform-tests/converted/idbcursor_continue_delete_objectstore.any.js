@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IDBObjectStore.delete() and IDBCursor.continue()";
-
 let cursor,db,result,store,value;
 
 // META: title=IDBObjectStore.delete() and IDBCursor.continue()

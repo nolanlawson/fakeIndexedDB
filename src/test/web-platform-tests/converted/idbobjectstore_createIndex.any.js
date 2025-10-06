@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IDBObjectStore.createIndex()";
-
 let cursor,db,result,store,value;
 
 // META: title=IDBObjectStore.createIndex()

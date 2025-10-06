@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IndexedDB: Verify [SameObject] behavior of IDBObjectStore's transaction attribute";
-
 let cursor,db,result,store,value;
 
 // META: global=window,worker

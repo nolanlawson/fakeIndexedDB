@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IDBCursor.continue()";
-
 // META: global=window,worker
 // META: title=IDBCursor.continue()
 // META: script=resources/support.js

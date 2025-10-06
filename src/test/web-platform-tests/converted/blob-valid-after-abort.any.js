@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "Blob Valid After Abort";
-
 let cursor,db,result,store,value;
 
 // META: title=Blob Valid After Abort

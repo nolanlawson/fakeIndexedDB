@@ -1,15 +1,9 @@
 import "../wpt-env.js";
-
 import "./resources/nested-cloning-common.js";
-
 import "./resources/support.js";
-
 import "./resources/support-get-all.js";
-
 import "./resources/support-promises.js";
-
 globalThis.title = "IndexedDB: Test IDBObjectStore.getAll with options dictionary.";
-
 let cursor,db,result,store,value;
 
 // META: title=IndexedDB: Test IDBObjectStore.getAll with options dictionary.

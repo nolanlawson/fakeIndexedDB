@@ -1,13 +1,8 @@
 import "../wpt-env.js";
-
 import "./resources/support-promises.js";
-
 import "./resources/support.js";
-
 import "./resources/request-event-ordering-common.js";
-
 globalThis.title = "IndexedDB: request result events are delivered in order";
-
 let cursor,db,result,store,value;
 
 // META: title=IndexedDB: request result events are delivered in order

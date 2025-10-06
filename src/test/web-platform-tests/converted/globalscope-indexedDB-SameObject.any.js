@@ -1,7 +1,5 @@
 import "../wpt-env.js";
-
 globalThis.title = "IndexedDB: Verify [SameObject] behavior of the global scope's indexedDB attribute";
-
 let cursor,db,result,store,value;
 
 // META: title=IndexedDB: Verify [SameObject] behavior of the global scope's indexedDB attribute

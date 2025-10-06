@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "Blob Valid Before Commit";
-
 let cursor,db,result,store,value;
 
 // META: title=Blob Valid Before Commit

@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support-promises.js";
-
 globalThis.title = "IndexedDB: Parallel iteration of cursors in upgradeneeded";
-
 let cursor,db,result,store,value;
 
 // META: title=IndexedDB: Parallel iteration of cursors in upgradeneeded

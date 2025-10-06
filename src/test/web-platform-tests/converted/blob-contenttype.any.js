@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "Blob Content Type";
-
 let cursor,db,result,store,value;
 
 // META: title=Blob Content Type

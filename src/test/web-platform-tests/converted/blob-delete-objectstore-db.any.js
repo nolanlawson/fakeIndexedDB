@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "Blob Delete Object Store";
-
 let cursor,db,result,store,value;
 
 // META: title=Blob Delete Object Store

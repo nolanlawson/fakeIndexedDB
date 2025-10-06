@@ -1,11 +1,7 @@
 import "../wpt-env.js";
-
 import "./resources/support-promises.js";
-
 import "./resources/support.js";
-
 globalThis.title = "Bubbling and capturing of request events";
-
 let cursor,db,result,store,value;
 
 // META: title=Bubbling and capturing of request events

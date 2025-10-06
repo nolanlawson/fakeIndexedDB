@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support-promises.js";
-
 globalThis.title = "Indexed DB transaction state during Structured Serializing";
-
 let cursor,db,result,store,value;
 
 // META: script=resources/support-promises.js

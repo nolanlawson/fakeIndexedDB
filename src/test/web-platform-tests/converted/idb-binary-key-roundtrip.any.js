@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 globalThis.title = "IndexedDB: Binary keys written to a database and read back";
-
 let cursor,db,result,store,value;
 
 // META: title=IndexedDB: Binary keys written to a database and read back

@@ -1,7 +1,5 @@
 import "../wpt-env.js";
-
 import "./resources/support.js";
-
 let cursor,db,result,store,value;
 
 

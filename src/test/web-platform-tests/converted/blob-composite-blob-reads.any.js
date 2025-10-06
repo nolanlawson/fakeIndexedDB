@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support-promises.js";
-
 globalThis.title = "IDB-backed composite blobs maintain coherency";
-
 let cursor,db,result,store,value;
 
 // META: title=IDB-backed composite blobs maintain coherency

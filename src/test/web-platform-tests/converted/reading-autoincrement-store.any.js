@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support-promises.js";
-
 import "./resources/reading-autoincrement-common.js";
-
 let cursor,db,result,store,value;
 
 // META: global=window,dedicatedworker,sharedworker,serviceworker

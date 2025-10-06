@@ -1,9 +1,6 @@
 import "../wpt-env.js";
-
 import "./resources/support-promises.js";
-
 globalThis.title = "Index Tombstones";
-
 let cursor,db,result,store,value;
 
 // META: title=Index Tombstones

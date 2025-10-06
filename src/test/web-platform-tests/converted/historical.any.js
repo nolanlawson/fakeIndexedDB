@@ -1,7 +1,5 @@
 import "../wpt-env.js";
-
 globalThis.title = "IndexedDB: Historical features";
-
 let cursor,db,result,store,value;
 
 // META: title=IndexedDB: Historical features
