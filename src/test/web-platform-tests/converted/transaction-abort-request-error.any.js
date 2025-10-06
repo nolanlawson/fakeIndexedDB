@@ -1,12 +1,12 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
-
-globalThis.title = "IndexedDB: Test error events fired at requests from aborted transaction";
-
 import "./resources/support-promises.js";
 
 import "./resources/support.js";
+
+globalThis.title = "IndexedDB: Test error events fired at requests from aborted transaction";
+
+let cursor,db,result,store,value;
 
 // META: title=IndexedDB: Test error events fired at requests from aborted transaction
 // META: global=window,worker

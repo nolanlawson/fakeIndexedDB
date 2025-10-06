@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "IDBKeyRange Tests - Incorrect";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=IDBKeyRange Tests - Incorrect
 // META: global=window,worker

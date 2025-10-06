@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "IndexedDB: IDBKeyRange.includes()";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=IndexedDB: IDBKeyRange.includes()
 // META: global=window,worker

@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "IDBTransaction - complete event";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=IDBTransaction - complete event
 // META: global=window,worker

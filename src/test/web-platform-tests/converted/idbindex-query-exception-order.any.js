@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "IndexedDB: IDBIndex query method Ordering";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=IndexedDB: IDBIndex query method Ordering
 // META: global=window,worker

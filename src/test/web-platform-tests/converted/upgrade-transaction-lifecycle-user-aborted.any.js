@@ -1,12 +1,12 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
-
-globalThis.title = "IndexedDB: user-abort()ed versionchange transaction lifecycle";
-
 import "./resources/support.js";
 
 import "./resources/support-promises.js";
+
+globalThis.title = "IndexedDB: user-abort()ed versionchange transaction lifecycle";
+
+let cursor,db,result,store,value;
 
 // META: title=IndexedDB: user-abort()ed versionchange transaction lifecycle
 // META: global=window,worker

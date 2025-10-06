@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "IndexedDB: clone before key path evaluation";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=IndexedDB: clone before key path evaluation
 // META: global=window,worker

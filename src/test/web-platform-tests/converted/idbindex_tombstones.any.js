@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support-promises.js";
 
 globalThis.title = "Index Tombstones";
 
-import "./resources/support-promises.js";
+let cursor,db,result,store,value;
 
 // META: title=Index Tombstones
 // META: script=resources/support-promises.js

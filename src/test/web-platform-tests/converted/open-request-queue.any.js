@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "IndexedDB: open and delete request queues";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=IndexedDB: open and delete request queues
 // META: global=window,worker

@@ -1,8 +1,8 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
-
 import "./resources/support.js";
+
+let cursor,db,result,store,value;
 
 
   async_test(function(t) {

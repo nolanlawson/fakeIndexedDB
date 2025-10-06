@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "IndexedDB: Verify [SameObject] behavior of IDBTransaction's db attribute";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=IndexedDB: Verify [SameObject] behavior of IDBTransaction's db attribute
 // META: global=window,worker

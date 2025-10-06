@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "Blob Delete Object Store";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=Blob Delete Object Store
 // META: script=resources/support.js

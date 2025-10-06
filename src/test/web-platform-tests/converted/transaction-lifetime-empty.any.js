@@ -1,12 +1,11 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "IndexedDB: Commit ordering of empty transactions";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
-(function () {
 // META: title=IndexedDB: Commit ordering of empty transactions
 // META: global=window,worker
 // META: script=resources/support.js
@@ -91,5 +90,3 @@ indexeddb_test(
       });
     },
     'Multiple transactions without requests complete in the expected order');
-
-})();

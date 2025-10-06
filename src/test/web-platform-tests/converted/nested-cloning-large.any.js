@@ -1,12 +1,12 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
-
-globalThis.title = "IndexedDB: large nested objects are cloned correctly";
-
 import "./resources/support-promises.js";
 
 import "./resources/nested-cloning-common.js";
+
+globalThis.title = "IndexedDB: large nested objects are cloned correctly";
+
+let cursor,db,result,store,value;
 
 // META: title=IndexedDB: large nested objects are cloned correctly
 // META: global=window,worker

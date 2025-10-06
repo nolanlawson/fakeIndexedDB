@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = " IDBIndex Key sort order";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title= IDBIndex Key sort order
 // META: global=window,worker

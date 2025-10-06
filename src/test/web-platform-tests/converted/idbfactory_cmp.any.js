@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support-promises.js";
 
 globalThis.title = "IDBFactory.cmp()";
 
-import "./resources/support-promises.js";
+let cursor,db,result,store,value;
 
 // META: global=window,worker
 // META: title=IDBFactory.cmp()

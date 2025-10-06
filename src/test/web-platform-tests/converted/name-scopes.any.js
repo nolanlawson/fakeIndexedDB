@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support-promises.js";
 
 globalThis.title = "IndexedDB: scoping for database / object store / index names, and index keys";
 
-import "./resources/support-promises.js";
+let cursor,db,result,store,value;
 
 // META: title=IndexedDB: scoping for database / object store / index names, and index keys
 // META: global=window,worker

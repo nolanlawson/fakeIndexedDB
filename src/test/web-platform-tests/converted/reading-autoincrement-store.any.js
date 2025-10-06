@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
-
 import "./resources/support-promises.js";
 
 import "./resources/reading-autoincrement-common.js";
+
+let cursor,db,result,store,value;
 
 // META: global=window,dedicatedworker,sharedworker,serviceworker
 // META: script=resources/support-promises.js

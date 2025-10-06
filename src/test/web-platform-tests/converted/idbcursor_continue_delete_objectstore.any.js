@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "IDBObjectStore.delete() and IDBCursor.continue()";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=IDBObjectStore.delete() and IDBCursor.continue()
 // META: global=window,worker

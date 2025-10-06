@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support-promises.js";
 
 globalThis.title = "IndexedDB: transactions with large request results are aborted correctly";
 
-import "./resources/support-promises.js";
+let cursor,db,result,store,value;
 
 // META: title=IndexedDB: transactions with large request results are aborted correctly
 // META: global=window,worker

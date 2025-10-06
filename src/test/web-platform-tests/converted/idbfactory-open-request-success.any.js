@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "IDBFactory open(): request properties on success";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=IDBFactory open(): request properties on success
 // META: global=window,worker

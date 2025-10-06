@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "IDBRequest.result";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=IDBRequest.result
 // META: global=window,worker

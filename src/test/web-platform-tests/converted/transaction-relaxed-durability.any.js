@@ -1,8 +1,8 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
-
 import "./resources/support-promises.js";
+
+let cursor,db,result,store,value;
 
 // META: script=resources/support-promises.js
 // META: timeout=long

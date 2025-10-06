@@ -1,12 +1,12 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
-
-globalThis.title = "IndexedDB: aborting transactions reverts index metadata";
-
 import "./resources/support-promises.js";
 
 import "./resources/support.js";
+
+globalThis.title = "IndexedDB: aborting transactions reverts index metadata";
+
+let cursor,db,result,store,value;
 
 // META: title=IndexedDB: aborting transactions reverts index metadata
 // META: global=window,worker

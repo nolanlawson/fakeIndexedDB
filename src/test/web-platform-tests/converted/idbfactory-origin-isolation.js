@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
-
 import "./resources/support.js";
 
 import "./resources/support-promises.js";
+
+let cursor,db,result,store,value;
 
 
 

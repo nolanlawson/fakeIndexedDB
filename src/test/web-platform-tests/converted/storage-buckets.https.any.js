@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support-promises.js";
 
 globalThis.title = "Buckets API: Tests for indexedDB API.";
 
-import "./resources/support-promises.js";
+let cursor,db,result,store,value;
 
 // META: title=Buckets API: Tests for indexedDB API.
 // META: global=window,worker

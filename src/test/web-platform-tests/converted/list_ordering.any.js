@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support.js";
 
 globalThis.title = "ObjectStoreNames and indexNames ordering";
 
-import "./resources/support.js";
+let cursor,db,result,store,value;
 
 // META: title=ObjectStoreNames and indexNames ordering
 // META: global=window,worker

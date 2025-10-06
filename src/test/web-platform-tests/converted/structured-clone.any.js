@@ -1,10 +1,10 @@
 import "../wpt-env.js";
 
-let cursor,db,result,store,value;
+import "./resources/support-promises.js";
 
 globalThis.title = "Indexed DB and Structured Serializing/Deserializing";
 
-import "./resources/support-promises.js";
+let cursor,db,result,store,value;
 
 // META: title=Indexed DB and Structured Serializing/Deserializing
 // META: timeout=long
