@@ -29,7 +29,7 @@ const addImportee = (filename, match, dest, codeChunks) => {
     const relative = path.posix.relative(inFolder, source);
     const target = path.posix.join(outFolder, relative);
     const importee = `./${path.posix.relative(path.posix.dirname(dest), target)}`;
-    codeChunks.push(`import "${importee}";\n`);
+    codeChunks.push(`import "${importee}";`);
     fs.writeFileSync(target, fs.readFileSync(source, "utf-8"));
 };
 
@@ -65,7 +65,7 @@ const addImportee = (filename, match, dest, codeChunks) => {
                 path.posix.relative(path.posix.dirname(dest), __dirname),
                 "wpt-env.js",
             );
-            codeChunks.push(`import "${relativeWptEnvLocation}";\n`);
+            codeChunks.push(`import "${relativeWptEnvLocation}";`);
         }
 
         // Because these are 'imported' with <script>, the support
@@ -129,7 +129,7 @@ const addImportee = (filename, match, dest, codeChunks) => {
                 path.posix.relative(path.posix.dirname(dest), __dirname),
                 "wpt-env.js",
             );
-            codeChunks.push(`import "${relativeWptEnvLocation}";\n`);
+            codeChunks.push(`import "${relativeWptEnvLocation}";`);
         }
 
         const importMatches = testScript
@@ -152,7 +152,7 @@ const addImportee = (filename, match, dest, codeChunks) => {
         if (titleMatches.length) {
             // some tests use `self.title` to create the test name
             codeChunks.push(
-                `globalThis.title = ${JSON.stringify(titleMatches[0][1])};\n`,
+                `globalThis.title = ${JSON.stringify(titleMatches[0][1])};`,
             );
         }
 
