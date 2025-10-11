@@ -36,6 +36,23 @@ const schedulerPostTask =
 // fallback for environments that don't support any of the above
 const doSetTimeout = (fn: () => void) => setTimeout(fn, 0);
 
+let queue: (() => void)[] = [];
+
+const flush = () => {
+    const current = queue;
+    queue = [];
+    const errors = [];
+    for (const task of current) {
+        try {
+            task();
+        } catch (err) {
+            errors.push(err);
+        }
+    }
+    if (errors.length) {
+        throw new AggregateError(errors);
+    }
+};
 // Schedules a task to run later.  Use Node.js's setImmediate if available and
 // setTimeout otherwise.  Note that options like process.nextTick or
 // queueMicrotask will likely not work: IndexedDB semantics require that
@@ -48,5 +65,8 @@ export const queueTask = (fn: () => void): void => {
         getSetImmediateFromJsdom() ||
         schedulerPostTask ||
         doSetTimeout;
-    setImmediate(fn);
+    queue.push(fn);
+    if (queue.length === 1) {
+        setImmediate(flush);
+    }
 };
