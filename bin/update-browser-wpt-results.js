@@ -1,6 +1,7 @@
 // Update the reported WPT results in README.md for the latest browser versions
 // Skips WPT runs that are irrelevant to fake-indexeddb
-/* global fetch URLSearchParams await */
+/* global fetch URLSearchParams await console */
+
 const runs = await (
     await fetch(
         "https://wpt.fyi/api/runs?" +
@@ -19,6 +20,13 @@ const runs = await (
             ),
     )
 ).json();
+
+const browsers = runs.map((_) => ({
+    name:
+        _.browser_name.substring(0, 1).toUpperCase() +
+        _.browser_name.substring(1),
+    version: _.browser_version,
+}));
 
 const { results: testResults } = await (
     await fetch("https://wpt.fyi/api/search", {
@@ -48,4 +56,25 @@ const filteredTestResults = testResults
     })
     .sort((a, b) => (a.test < b.test ? -1 : 1));
 
-console.log(filteredTestResults.map((_) => _.test));
+const browserResultsSummaries = browsers.map(({ name, version }, i) => {
+    const passed = filteredTestResults
+        .map((_) => _.legacy_status[i].passes)
+        .reduce((a, b) => a + b, 0);
+    const total = filteredTestResults
+        .map((_) => _.legacy_status[i].total)
+        .reduce((a, b) => a + b, 0);
+    return {
+        name,
+        version,
+        passed,
+        total,
+    };
+});
+
+// print markdown table
+console.log("| Implementation | Passed | Total | % |");
+for (const { name, version, passed, total } of browserResultsSummaries) {
+    console.log(
+        `| ${name} (version ${version}) | ${passed} | ${total} | ${Math.round((1000 * passed) / total) / 10}% |`,
+    );
+}
