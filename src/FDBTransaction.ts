@@ -8,9 +8,6 @@ import {
 } from "./lib/errors.js";
 import FakeDOMStringList from "./lib/FakeDOMStringList.js";
 import { queueTask } from "./lib/scheduling.js";
-import { defineEventHandlerIDLAttribute } from "./lib/defineEventHandlerIDLAttribute.js";
-import { dispatchBubblingEvent } from "./lib/dispatchBubblingEvent.js";
-import FakeEvent from "./lib/FakeEvent.js";
 import type FDBDatabase from "./FDBDatabase.js";
 import type {
     FDBTransactionDurability,
@@ -18,6 +15,12 @@ import type {
     RollbackLog,
     TransactionMode,
 } from "./lib/types.js";
+import type FDBOpenDBRequest from "./FDBOpenDBRequest.js";
+import type ObjectStore from "./lib/ObjectStore.js";
+import type Index from "./lib/Index.js";
+import { defineEventHandlerIDLAttribute } from "./lib/defineEventHandlerIDLAttribute.js";
+import { dispatchBubblingEvent } from "./lib/dispatchBubblingEvent.js";
+import FakeEvent from "./lib/FakeEvent.js";
 
 // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#transaction
 class FDBTransaction extends EventTarget {
@@ -25,6 +28,7 @@ class FDBTransaction extends EventTarget {
     public _started = false;
     public _rollbackLog: RollbackLog = [];
     public _objectStoresCache: Map<string, FDBObjectStore> = new Map();
+    public _openRequest: FDBOpenDBRequest | null = null;
 
     public objectStoreNames: FakeDOMStringList;
     public mode: TransactionMode;
@@ -40,6 +44,9 @@ class FDBTransaction extends EventTarget {
         operation: () => void;
         request: FDBRequest;
     }[] = [];
+
+    public _createdIndexes = new Set<Index>();
+    public _createdObjectStores = new Set<ObjectStore>();
 
     constructor(
         storeNames: string[],
@@ -58,7 +65,7 @@ class FDBTransaction extends EventTarget {
         );
     }
 
-    // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#dfn-steps-for-aborting-a-transaction
+    // https://w3c.github.io/IndexedDB/#abort-transaction
     public _abort(errName: string | null) {
         for (const f of this._rollbackLog.reverse()) {
             f();
@@ -74,24 +81,68 @@ class FDBTransaction extends EventTarget {
             if (request.readyState !== "done") {
                 request.readyState = "done"; // This will cancel execution of this request's operation
                 if (request.source) {
-                    request.result = undefined;
-                    request.error = new AbortError();
+                    // https://w3c.github.io/IndexedDB/#ref-for-list-iterate%E2%91%A2
+                    // For each request of transaction’s request list, abort the steps to asynchronously
+                    // execute a request for request, set request’s processed flag to true, and queue a
+                    // database task to run these steps:
+                    queueTask(() => {
+                        // Set request’s result to undefined.
+                        request.result = undefined;
+                        // Set request’s error to a newly created "AbortError" DOMException.
+                        request.error = new AbortError();
 
-                    const event = new FakeEvent("error", {
-                        bubbles: true,
-                        cancelable: true,
+                        // Fire an event named error at request with its bubbles and cancelable attributes initialized
+                        // to true.
+                        const event = new FakeEvent("error", {
+                            bubbles: true,
+                            cancelable: true,
+                        });
+                        try {
+                            dispatchBubblingEvent(request, event, [
+                                this.db,
+                                this,
+                            ]);
+                        } catch (_err) {
+                            if (this._state === "active") {
+                                this._abort("AbortError");
+                            }
+                        }
                     });
-                    dispatchBubblingEvent(request, event, [this.db, this]);
                 }
             }
         }
 
+        // Queue a database task to run these steps:
         queueTask(() => {
-            const event = new FakeEvent("abort", {
+            // If transaction is an upgrade transaction, then set transaction’s connection’s associated database’s
+            // upgrade transaction to null.
+            // (i.e. remove it from the list of `db.connections`)
+            const isUpgradeTransaction = this.mode === "versionchange";
+            if (isUpgradeTransaction) {
+                this.db._rawDatabase.connections =
+                    this.db._rawDatabase.connections.filter(
+                        (connection) =>
+                            !connection._rawDatabase.transactions.includes(
+                                this,
+                            ),
+                    );
+            }
+            // Fire an event named abort at transaction with its bubbles attribute initialized to true.
+            const event = new Event("abort", {
                 bubbles: true,
                 cancelable: false,
             });
-            dispatchBubblingEvent(this, event, [this.db]);
+            this.dispatchEvent(event);
+
+            // If transaction is an upgrade transaction, then:
+            if (isUpgradeTransaction) {
+                // Let request be the open request associated with transaction.
+                const request = this._openRequest!;
+                // Set request’s transaction to null.
+                request.transaction = null;
+                // Set request’s result to undefined.
+                request.result = undefined;
+            }
         });
 
         this._state = "finished";
@@ -216,11 +267,11 @@ class FDBTransaction extends EventTarget {
 
                 try {
                     dispatchBubblingEvent(request, event, [this.db, this]);
-                } catch (err) {
-                    if (this._state !== "committing") {
+                } catch (_err) {
+                    if (this._state === "active") {
                         this._abort("AbortError");
+                        defaultAction = undefined; // do not abort again
                     }
-                    throw err;
                 }
 
                 // Default action of event
@@ -242,7 +293,7 @@ class FDBTransaction extends EventTarget {
             this._state = "finished";
 
             if (!this.error) {
-                const event = new FakeEvent("complete");
+                const event = new Event("complete");
                 this.dispatchEvent(event);
             }
         }

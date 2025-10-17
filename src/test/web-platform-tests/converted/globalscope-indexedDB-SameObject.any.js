@@ -1,8 +1,9 @@
 import "../wpt-env.js";
 
-let cursor,db,store,value;
+let cursor, db, result, store, value;
 
-globalThis.title = "IndexedDB: Verify [SameObject] behavior of the global scope's indexedDB attribute";
+globalThis.title =
+    "IndexedDB: Verify [SameObject] behavior of the global scope's indexedDB attribute";
 
 // META: title=IndexedDB: Verify [SameObject] behavior of the global scope's indexedDB attribute
 // META: global=window,worker
@@ -10,10 +11,12 @@ globalThis.title = "IndexedDB: Verify [SameObject] behavior of the global scope'
 // Spec:
 // "https://w3c.github.io/IndexedDB/#dom-windoworworkerglobalscope-indexeddb"
 
-'use strict';
+("use strict");
 
-test(t => {
-  assert_equals(
-      self.indexedDB, self.indexedDB,
-      'Attribute should yield the same object each time');
-}, 'indexedDB is [SameObject]');
+test((t) => {
+    assert_equals(
+        self.indexedDB,
+        self.indexedDB,
+        "Attribute should yield the same object each time",
+    );
+}, "indexedDB is [SameObject]");

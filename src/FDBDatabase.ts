@@ -17,21 +17,21 @@ import type {
 } from "./lib/types.js";
 import type Database from "./lib/Database.js";
 
+// Common first 3 steps of https://www.w3.org/TR/IndexedDB/#dom-idbdatabase-createobjectstore and https://www.w3.org/TR/IndexedDB/#dom-idbdatabase-deleteobjectstore
 const confirmActiveVersionchangeTransaction = (database: FDBDatabase) => {
-    if (!database._runningVersionchangeTransaction) {
+    // Let transaction be database’s upgrade transaction if it is not null, or throw an "InvalidStateError" DOMException otherwise.
+    let transaction;
+    if (database._runningVersionchangeTransaction) {
+        // Find the latest versionchange transaction
+        transaction = database._rawDatabase.transactions.findLast((tx) => {
+            return tx.mode === "versionchange";
+        });
+    }
+    if (!transaction) {
         throw new InvalidStateError();
     }
 
-    // Find the latest versionchange transaction
-    const transactions = database._rawDatabase.transactions.filter((tx) => {
-        return tx.mode === "versionchange";
-    });
-    const transaction = transactions[transactions.length - 1];
-
-    if (!transaction || transaction._state === "finished") {
-        throw new InvalidStateError();
-    }
-
+    // If transaction’s state is not active, then throw a "TransactionInactiveError" DOMException.
     if (transaction._state !== "active") {
         throw new TransactionInactiveError();
     }
@@ -44,6 +44,7 @@ class FDBDatabase extends EventTarget {
     public _closePending = false;
     public _closed = false;
     public _runningVersionchangeTransaction = false;
+    public _oldVersion: number | undefined;
     public _rawDatabase: Database;
 
     public name: string;
@@ -94,17 +95,9 @@ class FDBDatabase extends EventTarget {
             throw new InvalidAccessError();
         }
 
+        // Save for rollbackLog
         const objectStoreNames = [...this.objectStoreNames];
-        transaction._rollbackLog.push(() => {
-            const objectStore = this._rawDatabase.rawObjectStores.get(name);
-            if (objectStore) {
-                objectStore.deleted = true;
-            }
-
-            this.objectStoreNames = new FakeDOMStringList(...objectStoreNames);
-            transaction._scope.delete(name);
-            this._rawDatabase.rawObjectStores.delete(name);
-        });
+        const transactionObjectStoreNames = [...transaction.objectStoreNames];
 
         const rawObjectStore = new ObjectStore(
             this._rawDatabase,
@@ -115,24 +108,42 @@ class FDBDatabase extends EventTarget {
         this.objectStoreNames._push(name);
         this.objectStoreNames._sort();
         transaction._scope.add(name);
+        transaction._createdObjectStores.add(rawObjectStore);
         this._rawDatabase.rawObjectStores.set(name, rawObjectStore);
         transaction.objectStoreNames = new FakeDOMStringList(
             ...this.objectStoreNames,
         );
+
+        transaction._rollbackLog.push(() => {
+            rawObjectStore.deleted = true;
+
+            this.objectStoreNames = new FakeDOMStringList(...objectStoreNames);
+            transaction.objectStoreNames = new FakeDOMStringList(
+                ...transactionObjectStoreNames,
+            );
+
+            transaction._scope.delete(rawObjectStore.name);
+            this._rawDatabase.rawObjectStores.delete(rawObjectStore.name);
+        });
+
         return transaction.objectStore(name);
     }
 
+    // https://www.w3.org/TR/IndexedDB/#dom-idbdatabase-deleteobjectstore
     public deleteObjectStore(name: string) {
         if (name === undefined) {
             throw new TypeError();
         }
         const transaction = confirmActiveVersionchangeTransaction(this);
 
+        // Let store be the object store named name in database, or throw a "NotFoundError" DOMException if none.
         const store = this._rawDatabase.rawObjectStores.get(name);
         if (store === undefined) {
             throw new NotFoundError();
         }
 
+        // Remove store from this’s object store set.
+        // This method synchronously modifies the objectStoreNames property on the IDBDatabase instance on which it was called.
         this.objectStoreNames = new FakeDOMStringList(
             ...Array.from(this.objectStoreNames).filter((objectStoreName) => {
                 return objectStoreName !== name;
@@ -142,13 +153,29 @@ class FDBDatabase extends EventTarget {
             ...this.objectStoreNames,
         );
 
+        // If there is an object store handle associated with store and transaction, remove all entries from its index set.
+        const objectStore = transaction._objectStoresCache.get(name);
+        let prevIndexNames: string[] | undefined;
+        if (objectStore) {
+            prevIndexNames = [...objectStore.indexNames];
+            objectStore.indexNames = new FakeDOMStringList();
+        }
+
         transaction._rollbackLog.push(() => {
             store.deleted = false;
-            this._rawDatabase.rawObjectStores.set(name, store);
-            this.objectStoreNames._push(name);
+            this._rawDatabase.rawObjectStores.set(store.name, store);
+            this.objectStoreNames._push(store.name);
+            transaction.objectStoreNames._push(store.name);
             this.objectStoreNames._sort();
+
+            if (objectStore && prevIndexNames) {
+                objectStore.indexNames = new FakeDOMStringList(
+                    ...prevIndexNames,
+                );
+            }
         });
 
+        // Destroy store.
         store.deleted = true;
         this._rawDatabase.rawObjectStores.delete(name);
         transaction._objectStoresCache.delete(name);

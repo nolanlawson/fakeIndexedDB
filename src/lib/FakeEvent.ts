@@ -1,20 +1,20 @@
 export default class FakeEvent extends Event {
-    propagationStopped = false;
-    immediatePropagationStopped = false;
-    canceled = false;
+    public _propagationStopped = false;
+    public _immediatePropagationStopped = false;
+    public _canceled = false;
 
-    stopPropagation() {
-        this.propagationStopped = true;
+    public stopPropagation() {
+        this._propagationStopped = true;
         super.stopPropagation();
     }
 
-    stopImmediatePropagation() {
-        this.immediatePropagationStopped = true;
+    public stopImmediatePropagation() {
+        this._immediatePropagationStopped = true;
         super.stopImmediatePropagation();
     }
 
-    preventDefault() {
-        this.canceled = true;
+    public preventDefault() {
+        this._canceled = true;
         super.preventDefault();
     }
 }

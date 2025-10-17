@@ -130,14 +130,23 @@ class ObjectStore {
             }
         }
 
+        const rollbackLogForThisOperation = [];
+
         if (this.keyGenerator !== null && newRecord.key === undefined) {
+            let rolledBack = false;
+            const keyGeneratorBefore = this.keyGenerator.num;
+            const rollbackKeyGenerator = () => {
+                if (rolledBack) {
+                    return;
+                }
+                rolledBack = true;
+                if (this.keyGenerator) {
+                    this.keyGenerator.num = keyGeneratorBefore;
+                }
+            };
+            rollbackLogForThisOperation.push(rollbackKeyGenerator);
             if (rollbackLog) {
-                const keyGeneratorBefore = this.keyGenerator.num;
-                rollbackLog.push(() => {
-                    if (this.keyGenerator) {
-                        this.keyGenerator.num = keyGeneratorBefore;
-                    }
-                });
+                rollbackLog.push(rollbackKeyGenerator);
             }
 
             newRecord.key = this.keyGenerator.next();
@@ -166,7 +175,14 @@ class ObjectStore {
                         remainingKeyPath = remainingKeyPath.slice(i + 1);
 
                         if (!Object.hasOwn(object, identifier)) {
-                            object[identifier] = {};
+                            // Bypass prototype when setting (See `bindings-inject-values-bypass.any.js`)
+                            // Equivalent to `object[identifier] = ...` without using `Object.prototype`
+                            Object.defineProperty(object, identifier, {
+                                configurable: true,
+                                enumerable: true,
+                                writable: true,
+                                value: {},
+                            });
                         }
 
                         object = object[identifier];
@@ -175,7 +191,14 @@ class ObjectStore {
 
                 identifier = remainingKeyPath;
 
-                object[identifier] = newRecord.key;
+                // Bypass prototype when setting (See `bindings-inject-values-bypass.any.js`)
+                // Equivalent to `object[identifier] = ...` without using `Object.prototype`
+                Object.defineProperty(object, identifier, {
+                    configurable: true,
+                    enumerable: true,
+                    writable: true,
+                    value: newRecord.key,
+                });
             }
         } else if (
             this.keyGenerator !== null &&
@@ -186,16 +209,24 @@ class ObjectStore {
 
         const existingRecord = this.records.put(newRecord, noOverwrite);
 
+        let rolledBack = false;
+        const rollbackStoreRecord = () => {
+            if (rolledBack) {
+                return;
+            }
+            rolledBack = true;
+            if (existingRecord) {
+                // overwrite on rollback
+                this.storeRecord(existingRecord, false);
+            } else {
+                // delete on rollback
+                this.deleteRecord(newRecord.key);
+            }
+        };
+
+        rollbackLogForThisOperation.push(rollbackStoreRecord);
         if (rollbackLog) {
-            rollbackLog.push(() => {
-                if (existingRecord) {
-                    // overwrite on rollback
-                    this.storeRecord(existingRecord, false);
-                } else {
-                    // delete on rollback
-                    this.deleteRecord(newRecord.key);
-                }
-            });
+            rollbackLog.push(rollbackStoreRecord);
         }
 
         // Delete existing indexes
@@ -206,10 +237,21 @@ class ObjectStore {
         }
 
         // Update indexes
-        for (const rawIndex of this.rawIndexes.values()) {
-            if (rawIndex.initialized) {
-                rawIndex.storeRecord(newRecord);
+        try {
+            for (const rawIndex of this.rawIndexes.values()) {
+                if (rawIndex.initialized) {
+                    rawIndex.storeRecord(newRecord);
+                }
             }
+        } catch (err) {
+            // If this request fails here and preventDefault is used to stop the transaction from aborting, we need to roll back the addition of this record to the store, otherwise it will be present in subsequent requests on this transaction. Same for key generator.
+            if (err.name === "ConstraintError") {
+                for (const rollback of rollbackLogForThisOperation) {
+                    rollback();
+                }
+            }
+
+            throw err;
         }
 
         return newRecord.key;

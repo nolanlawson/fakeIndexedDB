@@ -1,16 +1,14 @@
-/* global console, process */
-
+/* eslint-env node */
 import { test } from "node:test";
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
 import path from "node:path";
 import * as fs from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { parse, stringify } from "smol-toml";
 import { glob } from "glob";
-
-const execAsync = promisify(exec);
+import { runTestFile } from "./runTestFile.js";
 
 const generateManifests = process.env.GENERATE_MANIFESTS;
+const writeToReadme = process.env.WRITE_TO_README;
 
 const __dirname = "src/test/web-platform-tests";
 const testFolder = path.join(__dirname, "converted");
@@ -29,19 +27,23 @@ function parseManifest(manifestFilename) {
     }
     const contents = parse(text);
     // we want to preserve comments, and smol-toml has no way to extract them
-    const comments = [...text.matchAll(/(?:^|\n)#([^#\n]+)/g)].map((_) => _[1]);
+    const comments = text.split("\n").filter((line) => line.startsWith("#"));
     return { contents, comments };
 }
 
 function stringifyManifest(generatedManifest, comments) {
     return (
-        (comments ? comments.map((_) => `#${_}\n`).join("") : "") +
+        (comments?.length > 0 ? comments.join("\n") + "\n" : "") +
         stringify(generatedManifest)
     );
 }
 
 let numExpectedFailures = 0;
+let numExpectedTimeouts = 0;
 let numUnstableTests = 0;
+let numPassedTests = 0;
+
+const timeout = 5000;
 
 for (const absFilename of filenames) {
     const filename = path.relative(testFolder, absFilename);
@@ -66,12 +68,15 @@ for (const absFilename of filenames) {
     }
 
     await test(filename, { skip }, async (t) => {
-        const { stdout, stderr } = await execAsync(`node ${filename}`, {
+        const { stdout, stderr, timedOut } = await runTestFile(filename, {
             cwd: testFolder,
-            encoding: "utf-8",
+            timeout,
         });
+        if (timedOut) {
+            generatedManifest.expectTimeout = true;
+        }
         if (stderr) {
-            console.error(stderr);
+            console.error(`stderr: ${stderr}`);
         }
         const results = {};
         const resultLines = stdout
@@ -86,7 +91,9 @@ for (const absFilename of filenames) {
             }
             Object.assign(results, resultLine.testResult);
         }
-        if (!Object.keys(results).length) {
+
+        // Skip this error if expectTimeout, because expectTimeout tells us something is wrong with this file. So this error only shows for files that run to completion and contain no test output.
+        if (!Object.keys(results).length && !generatedManifest.expectTimeout) {
             throw new Error("Did not receive any test results from test");
         }
 
@@ -113,6 +120,7 @@ for (const absFilename of filenames) {
                                 "Expected test to fail, but it passed",
                             );
                         }
+                        numPassedTests += 1;
                     } else {
                         generatedManifest[name] = {
                             expectation: "FAIL",
@@ -125,16 +133,35 @@ for (const absFilename of filenames) {
                     }
                 });
             }
+
+            if (generatedManifest.expectTimeout) {
+                if (expectedManifest?.contents?.expectTimeout) {
+                    numExpectedTimeouts += 1;
+                } else {
+                    throw new Error("Test file timed out before completion");
+                }
+            } else if (expectedManifest?.contents?.expectTimeout) {
+                throw new Error(
+                    "Expected test file to time out, but it didn't",
+                );
+            }
         } finally {
             if (generateManifests) {
                 fs.mkdirSync(path.dirname(manifestFilename), {
                     recursive: true,
                 });
                 if (Object.keys(generatedManifest).length) {
+                    // Sort to avoid issues where some tests complete before
+                    // others in non-deterministic order
+                    const sortedGeneratedManifest = Object.fromEntries(
+                        Object.keys(generatedManifest)
+                            .sort()
+                            .map((key) => [key, generatedManifest[key]]),
+                    );
                     fs.writeFileSync(
                         manifestFilename,
                         stringifyManifest(
-                            generatedManifest,
+                            sortedGeneratedManifest,
                             expectedManifest?.comments,
                         ),
                     );
@@ -150,5 +177,31 @@ for (const absFilename of filenames) {
 process.on("beforeExit", () => {
     // log some additional diagnostics. not attempting to match `node:test`'s output since it varies by reporter
     console.log(`Expected failures: ${numExpectedFailures}`);
+    console.log(`Expected timeouts: ${numExpectedTimeouts}`);
     console.log(`Unstable tests: ${numUnstableTests}`);
+    console.log(`Passed tests: ${numPassedTests}`);
+
+    // if WRITE_TO_README is set, then update the readme with the results
+    if (writeToReadme) {
+        const pkgJsonPath = path.join(
+            import.meta.dirname,
+            "../../../package.json",
+        );
+        const { version } = JSON.parse(readFileSync(pkgJsonPath, "utf-8"));
+
+        const readmePath = path.join(import.meta.dirname, "../../../README.md");
+        const readme = readFileSync(readmePath, "utf-8");
+        const total = parseInt(
+            readme.match(/<!-- wpt_results_total=(\d+) -->/)[1],
+            10,
+        );
+        const markdownRow = `| fake-indexeddb | ${version} | ${numPassedTests} | ${Math.round((1000 * numPassedTests) / total) / 10}% |`;
+        const newReadme = readme.replace(
+            /<!-- fakeindexeddb_wpt_results -->/,
+            markdownRow,
+        );
+        writeFileSync(readmePath, newReadme, "utf-8");
+        console.log("Wrote markdown to README:");
+        console.log(markdownRow);
+    }
 });

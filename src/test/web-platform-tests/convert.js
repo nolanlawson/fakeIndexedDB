@@ -1,18 +1,13 @@
-/* global console */
+/* eslint-env node */
 import fs from "node:fs";
-import { glob } from "glob";
 import path from "node:path";
+import { glob } from "glob";
 
 // HACK: some of the tests use sloppy mode, probably due to author error
 // This causes problems for us because we convert to ESM (strict) mode
 // So manually fix some of the sloppy global assignments in tests
-const globalVars = ["cursor", "db", "store", "value"];
+const globalVars = ["cursor", "db", "result", "store", "value"];
 const declareGlobalVars = `let ${globalVars.join(",")};\n`;
-
-const skip = [
-    // IDL test; out of scope for the time being.
-    "idlharness.any.js",
-];
 
 function makeParentDir(file) {
     const dir = path.posix.dirname(file);
@@ -28,10 +23,6 @@ const outFolder = path.posix.join(__dirname, "converted");
     const filenames = glob.sync("/**/*.{htm,html}", { root: inFolder });
     for (const filename of filenames) {
         const relative = path.posix.relative(inFolder, filename);
-        if (skip.includes(relative)) {
-            console.log(`Skipping ${relative}.`);
-            continue;
-        }
         const { dir, name } = path.parse(relative);
         const dest = path.join(outFolder, dir, `${name}.js`);
         console.log(`Converting ${relative}...`);
@@ -104,10 +95,6 @@ const outFolder = path.posix.join(__dirname, "converted");
     const filenames = glob.sync("/**/*.any.js", { root: inFolder });
     for (const filename of filenames) {
         const relative = path.posix.relative(inFolder, filename);
-        if (skip.includes(relative)) {
-            console.log(`Skipping ${relative}.`);
-            continue;
-        }
         const { dir, name } = path.parse(relative);
         const dest = path.join(outFolder, dir, `${name}.js`);
 
@@ -120,12 +107,28 @@ const outFolder = path.posix.join(__dirname, "converted");
 
         let codeChunks = [];
 
+        const wptRoot = path.posix.relative(
+            path.posix.dirname(dest),
+            __dirname,
+        );
         {
             const relativeWptEnvLocation = path.posix.join(
-                path.posix.relative(path.posix.dirname(dest), __dirname),
+                wptRoot,
                 "wpt-env.js",
             );
             codeChunks.push(`import "${relativeWptEnvLocation}";\n`);
+        }
+
+        if (filename.includes("idlharness.any.js")) {
+            codeChunks.push(
+                ...["idlharness.js", "webidl2.js"].map(
+                    (resource) =>
+                        `import "${path.posix.join(
+                            wptRoot,
+                            path.posix.join("idlharness", resource),
+                        )}"`,
+                ),
+            );
         }
 
         // HACK: these tests don't need the sloppy mode fixes, and in fact already declare the relevant variables
@@ -154,6 +157,8 @@ const outFolder = path.posix.join(__dirname, "converted");
                     ![
                         "/common/subset-tests.js",
                         "/storage/buckets/resources/util.js",
+                        "/resources/idlharness.js",
+                        "/resources/WebIDLParser.js",
                     ].includes(match[1]),
             );
 
@@ -165,15 +170,19 @@ const outFolder = path.posix.join(__dirname, "converted");
             codeChunks.push(fs.readFileSync(location) + "\n");
         }
 
-        codeChunks.push(testScript);
+        // HACK: this test re-declares the `expect` function, so wrap in an IIFE
+        if (filename.includes("transaction-lifetime-empty.any")) {
+            codeChunks.push(`(function () {\n${testScript}\n})();`);
+        } else {
+            codeChunks.push(testScript);
+        }
 
-        codeChunks = codeChunks.map((chunk) => {
-            return (
-                chunk
-                    // HACK: this test runs in sloppy mode and assumes `this` is the global
-                    .replaceAll(`this.saw =`, "saw =")
-            );
-        });
+        // HACK: this test runs in sloppy mode and assumes `this` is the global
+        if (filename.includes("delete-request-queue.any")) {
+            codeChunks = codeChunks.map((chunk) => {
+                return chunk.replaceAll(`this.saw =`, "saw =");
+            });
+        }
 
         makeParentDir(dest);
 

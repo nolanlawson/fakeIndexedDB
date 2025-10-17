@@ -24,6 +24,9 @@ global.ReadOnlyError = ReadOnlyError;
 global.TransactionInactiveError = TransactionInactiveError;
 global.VersionError = VersionError;
 
+// idlharness.js sniffs for this to detect this as a "window" realm
+global.Window = function Window() {};
+
 global.FileReader = class FileReader {
     async readAsArrayBuffer(blob) {
         this.result = await blob.arrayBuffer();
@@ -40,7 +43,43 @@ global.File = class File extends Blob {
     }
 };
 
-// currently we cannot define our own structured cloning algorithm for our File polyfill, so we implement our own
+class GenericCloneable {
+    constructor() {
+        for (const prop of ["a", "b", "c"]) {
+            this[prop] = Math.random();
+        }
+    }
+    __clone() {
+        const clone = Object.create(Object.getPrototypeOf(this));
+        Object.assign(clone, {
+            ...this,
+        });
+        return clone;
+    }
+}
+
+// generic cloneable object polyfills just so the structured clone tests pass
+[
+    "DOMMatrix",
+    "DOMMatrixReadOnly",
+    "DOMPoint",
+    "DOMPointReadOnly",
+    "DOMRect",
+    "DOMRectReadOnly",
+].forEach((Clazz) => {
+    global[Clazz] = class extends GenericCloneable {};
+    Object.defineProperty(global[Clazz], "name", { value: Clazz });
+});
+global.ImageData = class extends GenericCloneable {
+    constructor() {
+        super();
+        this.width = Math.random();
+        this.height = Math.random();
+        this.data = new Array(256).fill(0);
+    }
+};
+
+// currently we cannot define our own structured cloning algorithm for our polyfills, so we implement our own
 // structured clone to pass some tests. If this proposal is ever implemented we can remove this:
 // https://github.com/littledan/serializable-objects
 const originalStructuredClone = global.structuredClone;
@@ -49,6 +88,14 @@ global.structuredClone = function customStructuredClone(obj) {
         return new File(structuredClone(obj._bits), obj.name, {
             lastModified: obj.lastModified,
         });
+    } else if (obj instanceof GenericCloneable) {
+        return obj.__clone();
+    } else if (obj instanceof Event || obj instanceof MessageChannel) {
+        // FakeEvent should be non-serializable, same as native Event
+        // TODO [#140]: use native Event/EventTarget
+        // As for MessageChannel, in Node 22+ the error is a proper DataCloneError
+        // but currently we need this for Node 18/20 support
+        throw new DataCloneError("not serializable");
     }
     return originalStructuredClone(obj);
 };
@@ -57,6 +104,8 @@ global.document = {
     // Kind of cheating for key_invalid.js: It wants to test using a DOM node as a key, but that can't work in Node, so
     // this will instead use another object that also can't be used as a key.
     getElementsByTagName: () => Math,
+    // structured-clone.any.js creates an `<input type=file multiple>`
+    createElement: () => ({ files: [{ name: "foo.txt" }] }),
 };
 global.location = {
     location: {},
@@ -67,6 +116,11 @@ global.window = global;
 // This is currently used by the tests just to sniff whether the object is clonable or not
 global.postMessage = (obj) => {
     structuredClone(obj);
+};
+
+global.addEventListener = () => {
+    // no-op, the `idb-explicit-commit-throw.any.js` test currently
+    // tries to `addEventListener('error')` and `preventDefault` on it
 };
 
 const generatedTestNames = new Map();
@@ -686,16 +740,34 @@ const test = (cb, name) => {
 };
 
 /**
- * This constructor helper allows DOM events to be handled using Promises,
- * which can make it a lot easier to test a very specific series of events,
+ * Allow DOM events to be handled using Promises.
+ *
+ * This can make it a lot easier to test a very specific series of events,
  * including ensuring that unexpected events are not fired at any point.
+ *
+ * `EventWatcher` will assert if an event occurs while there is no `wait_for`
+ * created Promise waiting to be fulfilled, or if the event is of a different type
+ * to the type currently expected. This ensures that only the events that are
+ * expected occur, in the correct order, and with the correct timing.
+ *
+ * @constructor
+ * @param {Test} test - The `Test` to use for the assertion.
+ * @param {EventTarget} watchedNode - The target expected to receive the events.
+ * @param {string[]} eventTypes - List of events to watch for.
+ * @param {Promise} timeoutPromise - Promise that will cause the
+ * test to be set to `TIMEOUT` once fulfilled.
+ *
  */
-function EventWatcher(test, watchedNode, eventTypes) {
-    if (typeof eventTypes == "string") {
+function EventWatcher(test, watchedNode, eventTypes, timeoutPromise) {
+    if (typeof eventTypes === "string") {
         eventTypes = [eventTypes];
     }
 
     var waitingFor = null;
+
+    // This is null unless we are recording all events, in which case it
+    // will be an Array object.
+    var recordedEvents = null;
 
     var eventHandler = test.step_func(function (evt) {
         assert_true(
@@ -711,6 +783,11 @@ function EventWatcher(test, watchedNode, eventTypes) {
                 evt.type +
                 " event instead",
         );
+
+        if (Array.isArray(recordedEvents)) {
+            recordedEvents.push(evt);
+        }
+
         if (waitingFor.types.length > 1) {
             // Pop first event from array
             waitingFor.types.shift();
@@ -721,7 +798,10 @@ function EventWatcher(test, watchedNode, eventTypes) {
         // need to set waitingFor.
         var resolveFunc = waitingFor.resolve;
         waitingFor = null;
-        resolveFunc(evt);
+        // Likewise, we should reset the state of recordedEvents.
+        var result = recordedEvents || evt;
+        recordedEvents = null;
+        resolveFunc(result);
     });
 
     for (var i = 0; i < eventTypes.length; i++) {
@@ -730,16 +810,57 @@ function EventWatcher(test, watchedNode, eventTypes) {
 
     /**
      * Returns a Promise that will resolve after the specified event or
-     * series of events has occured.
+     * series of events has occurred.
+     *
+     * @param {Object} options An optional options object. If the 'record' property
+     *                 on this object has the value 'all', when the Promise
+     *                 returned by this function is resolved,  *all* Event
+     *                 objects that were waited for will be returned as an
+     *                 array.
+     *
+     * @example
+     * const watcher = new EventWatcher(t, div, [ 'animationstart',
+     *                                            'animationiteration',
+     *                                            'animationend' ]);
+     * return watcher.wait_for([ 'animationstart', 'animationend' ],
+     *                         { record: 'all' }).then(evts => {
+     *   assert_equals(evts[0].elapsedTime, 0.0);
+     *   assert_equals(evts[1].elapsedTime, 2.0);
+     * });
      */
-    this.wait_for = function (types) {
+    this.wait_for = function (types, options) {
         if (waitingFor) {
             return Promise.reject("Already waiting for an event or events");
         }
-        if (typeof types == "string") {
+        if (typeof types === "string") {
             types = [types];
         }
+        if (options && options.record && options.record === "all") {
+            recordedEvents = [];
+        }
         return new Promise(function (resolve, reject) {
+            var timeout = test.step_func(function () {
+                // If the timeout fires after the events have been received
+                // or during a subsequent call to wait_for, ignore it.
+                if (!waitingFor || waitingFor.resolve !== resolve) return;
+
+                // This should always fail, otherwise we should have
+                // resolved the promise.
+                assert_true(
+                    waitingFor.types.length === 0,
+                    "Timed out waiting for " + waitingFor.types.join(", "),
+                );
+                var result = recordedEvents;
+                recordedEvents = null;
+                var resolveFunc = waitingFor.resolve;
+                waitingFor = null;
+                resolveFunc(result);
+            });
+
+            if (timeoutPromise) {
+                timeoutPromise().then(timeout);
+            }
+
             waitingFor = {
                 types: types,
                 resolve: resolve,
@@ -748,13 +869,16 @@ function EventWatcher(test, watchedNode, eventTypes) {
         });
     };
 
-    function stop_watching() {
+    /**
+     * Stop listening for events
+     */
+    this.stop_watching = function () {
         for (var i = 0; i < eventTypes.length; i++) {
             watchedNode.removeEventListener(eventTypes[i], eventHandler, false);
         }
-    }
+    };
 
-    test.add_cleanup(stop_watching);
+    test.add_cleanup(this.stop_watching);
 
     return this;
 }
@@ -1007,6 +1131,39 @@ function _assert_inherits(name) {
     };
 }
 
+/**
+ * Assert that ``object`` does not have an own property with name
+ * ``property_name``, but inherits one through the prototype chain.
+ *
+ * @param {Object} object - Object that should have the given property in its prototype chain.
+ * @param {string} property_name - Expected property name.
+ * @param {string} [description] - Description of the condition being tested.
+ */
+function assert_inherits(object, property_name, description) {
+    return _assert_inherits("assert_inherits")(
+        object,
+        property_name,
+        description,
+    );
+}
+
+/**
+ * Assert that ``object`` has an own property with name ``property_name``.
+ *
+ * @param {Object} object - Object that should have the given property.
+ * @param {string} property_name - Expected property name.
+ * @param {string} [description] - Description of the condition being tested.
+ */
+function assert_own_property(object, property_name, description) {
+    assert(
+        object.hasOwnProperty(property_name),
+        "assert_own_property",
+        description,
+        "expected property ${p} missing",
+        { p: property_name },
+    );
+}
+
 const addToGlobal = {
     add_completion_callback,
     assert_array_equals,
@@ -1014,8 +1171,10 @@ const addToGlobal = {
     assert_equals,
     assert_false,
     assert_idl_attribute,
+    assert_inherits,
     assert_key_equals,
     assert_object_equals,
+    assert_own_property,
     assert_not_equals,
     assert_readonly,
     assert_throws,

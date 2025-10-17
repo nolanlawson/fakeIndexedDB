@@ -8,7 +8,7 @@ export function dispatchBubblingEvent(
     target.dispatchEvent(event);
 
     for (const ancestor of ancestors) {
-        if (event.propagationStopped || event.immediatePropagationStopped) {
+        if (event._propagationStopped || event._immediatePropagationStopped) {
             return;
         }
         ancestor.dispatchEvent(event);
