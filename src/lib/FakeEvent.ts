@@ -1,3 +1,7 @@
+/**
+ * Same as Event, but allowing us to observe
+ * the cancellation/propagation status.
+ */
 export default class FakeEvent extends Event {
     public _propagationStopped = false;
     public _immediatePropagationStopped = false;

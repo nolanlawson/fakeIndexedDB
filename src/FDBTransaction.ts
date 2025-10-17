@@ -8,6 +8,9 @@ import {
 } from "./lib/errors.js";
 import FakeDOMStringList from "./lib/FakeDOMStringList.js";
 import { queueTask } from "./lib/scheduling.js";
+import { defineEventHandlerIDLAttribute } from "./lib/defineEventHandlerIDLAttribute.js";
+import { dispatchBubblingEvent } from "./lib/dispatchBubblingEvent.js";
+import FakeEvent from "./lib/FakeEvent.js";
 import type FDBDatabase from "./FDBDatabase.js";
 import type {
     FDBTransactionDurability,
@@ -18,9 +21,6 @@ import type {
 import type FDBOpenDBRequest from "./FDBOpenDBRequest.js";
 import type ObjectStore from "./lib/ObjectStore.js";
 import type Index from "./lib/Index.js";
-import { defineEventHandlerIDLAttribute } from "./lib/defineEventHandlerIDLAttribute.js";
-import { dispatchBubblingEvent } from "./lib/dispatchBubblingEvent.js";
-import FakeEvent from "./lib/FakeEvent.js";
 
 // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#transaction
 class FDBTransaction extends EventTarget {
@@ -275,7 +275,7 @@ class FDBTransaction extends EventTarget {
                 }
 
                 // Default action of event
-                if (!event.canceled) {
+                if (!event._canceled) {
                     if (defaultAction) {
                         defaultAction();
                     }

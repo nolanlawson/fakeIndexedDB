@@ -1,5 +1,6 @@
 import type FakeEvent from "./FakeEvent.js";
 
+// Dispatch an event that bubbles, similar to how the browser would
 export function dispatchBubblingEvent(
     target: EventTarget,
     event: FakeEvent,

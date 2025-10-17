@@ -1,7 +1,9 @@
+import type { EventType } from "./types.js";
+
 // https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-idl-attributes
 export function defineEventHandlerIDLAttribute<
     T extends EventTarget,
-    N extends keyof T & string,
+    N extends keyof T & `on${EventType}`,
 >(target: T, name: N) {
     const eventName = name.substring(2); // remove leading 'on'
     let value: EventListener | null = null;
