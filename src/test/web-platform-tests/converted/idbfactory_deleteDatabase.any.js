@@ -1,6 +1,6 @@
 import "../wpt-env.js";
 
-let cursor, db, result, store, value;
+let cursor,db,result,store,value;
 
 globalThis.title = "IDBFactory.deleteDatabase()";
 
@@ -8,9 +8,12 @@ globalThis.title = "IDBFactory.deleteDatabase()";
  *
  * Go through each finished test, see if it has an associated database. Close
  * that and delete the database. */
-add_completion_callback(function (tests) {
-    for (var i in tests) {
-        if (tests[i].db) {
+add_completion_callback(function(tests)
+{
+    for (var i in tests)
+    {
+        if(tests[i].db)
+        {
             tests[i].db.close();
             self.indexedDB.deleteDatabase(tests[i].db.name);
         }
@@ -18,20 +21,20 @@ add_completion_callback(function (tests) {
 });
 
 function fail(test, desc) {
-    return test.step_func(function (e) {
+    return test.step_func(function(e) {
         if (e && e.message && e.target.error)
-            assert_unreached(
-                desc + " (" + e.target.error.name + ": " + e.message + ")",
-            );
+            assert_unreached(desc + " (" + e.target.error.name + ": " + e.message + ")");
         else if (e && e.message)
             assert_unreached(desc + " (" + e.message + ")");
-        else if (e && e.target.readyState === "done" && e.target.error)
+        else if (e && e.target.readyState === 'done' && e.target.error)
             assert_unreached(desc + " (" + e.target.error.name + ")");
-        else assert_unreached(desc);
+        else
+            assert_unreached(desc);
     });
 }
 
-function createdb(test, dbname, version) {
+function createdb(test, dbname, version)
+{
     var rq_open = createdb_for_multiple_tests(dbname, version);
     return rq_open.setTest(test);
 }
@@ -40,54 +43,52 @@ function createdb_for_multiple_tests(dbname, version) {
     var rq_open,
         fake_open = {},
         test = null,
-        dbname = dbname
-            ? dbname
-            : "testdb-" + new Date().getTime() + Math.random();
+        dbname = (dbname ? dbname : "testdb-" + new Date().getTime() + Math.random() );
 
-    if (version) rq_open = self.indexedDB.open(dbname, version);
-    else rq_open = self.indexedDB.open(dbname);
+    if (version)
+        rq_open = self.indexedDB.open(dbname, version);
+    else
+        rq_open = self.indexedDB.open(dbname);
 
     function auto_fail(evt, current_test) {
         /* Fail handlers, if we haven't set on/whatever/, don't
          * expect to get event whatever. */
         rq_open.manually_handled = {};
 
-        rq_open.addEventListener(evt, function (e) {
+        rq_open.addEventListener(evt, function(e) {
             if (current_test !== test) {
                 return;
             }
 
-            test.step(function () {
+            test.step(function() {
                 if (!rq_open.manually_handled[evt]) {
                     assert_unreached("unexpected open." + evt + " event");
                 }
 
-                if (
-                    e.target.result + "" == "[object IDBDatabase]" &&
-                    !this.db
-                ) {
-                    this.db = e.target.result;
+                if (e.target.result + '' == '[object IDBDatabase]' &&
+                    !this.db) {
+                  this.db = e.target.result;
 
-                    this.db.onerror = fail(test, "unexpected db.error");
-                    this.db.onabort = fail(test, "unexpected db.abort");
-                    this.db.onversionchange = fail(
-                        test,
-                        "unexpected db.versionchange",
-                    );
+                  this.db.onerror = fail(test, 'unexpected db.error');
+                  this.db.onabort = fail(test, 'unexpected db.abort');
+                  this.db.onversionchange =
+                      fail(test, 'unexpected db.versionchange');
                 }
             });
         });
-        rq_open.__defineSetter__("on" + evt, function (h) {
+        rq_open.__defineSetter__("on" + evt, function(h) {
             rq_open.manually_handled[evt] = true;
-            if (!h) rq_open.addEventListener(evt, function () {});
-            else rq_open.addEventListener(evt, test.step_func(h));
+            if (!h)
+                rq_open.addEventListener(evt, function() {});
+            else
+                rq_open.addEventListener(evt, test.step_func(h));
         });
     }
 
     // add a .setTest method to the IDBOpenDBRequest object
-    Object.defineProperty(rq_open, "setTest", {
+    Object.defineProperty(rq_open, 'setTest', {
         enumerable: false,
-        value: function (t) {
+        value: function(t) {
             test = t;
 
             auto_fail("upgradeneeded", test);
@@ -96,14 +97,14 @@ function createdb_for_multiple_tests(dbname, version) {
             auto_fail("error", test);
 
             return this;
-        },
+        }
     });
 
     return rq_open;
 }
 
 function assert_key_equals(actual, expected, description) {
-    assert_equals(indexedDB.cmp(actual, expected), 0, description);
+  assert_equals(indexedDB.cmp(actual, expected), 0, description);
 }
 
 // Usage:
@@ -117,35 +118,36 @@ function assert_key_equals(actual, expected, description) {
 //     },
 //     'Test case description');
 function indexeddb_test(upgrade_func, open_func, description, options) {
-    async_test(function (t) {
-        options = Object.assign({ upgrade_will_abort: false }, options);
-        var dbname = location + "-" + t.name;
-        var del = indexedDB.deleteDatabase(dbname);
-        del.onerror = t.unreached_func("deleteDatabase should succeed");
-        var open = indexedDB.open(dbname, 1);
-        open.onupgradeneeded = t.step_func(function () {
-            var db = open.result;
-            t.add_cleanup(function () {
-                // If open didn't succeed already, ignore the error.
-                open.onerror = function (e) {
-                    e.preventDefault();
-                };
-                db.close();
-                indexedDB.deleteDatabase(db.name);
-            });
-            var tx = open.transaction;
-            upgrade_func(t, db, tx, open);
-        });
-        if (options.upgrade_will_abort) {
-            open.onsuccess = t.unreached_func("open should not succeed");
-        } else {
-            open.onerror = t.unreached_func("open should succeed");
-            open.onsuccess = t.step_func(function () {
-                var db = open.result;
-                if (open_func) open_func(t, db, open);
-            });
-        }
-    }, description);
+  async_test(function(t) {
+    options = Object.assign({upgrade_will_abort: false}, options);
+    var dbname = location + '-' + t.name;
+    var del = indexedDB.deleteDatabase(dbname);
+    del.onerror = t.unreached_func('deleteDatabase should succeed');
+    var open = indexedDB.open(dbname, 1);
+    open.onupgradeneeded = t.step_func(function() {
+      var db = open.result;
+      t.add_cleanup(function() {
+        // If open didn't succeed already, ignore the error.
+        open.onerror = function(e) {
+          e.preventDefault();
+        };
+        db.close();
+        indexedDB.deleteDatabase(db.name);
+      });
+      var tx = open.transaction;
+      upgrade_func(t, db, tx, open);
+    });
+    if (options.upgrade_will_abort) {
+      open.onsuccess = t.unreached_func('open should not succeed');
+    } else {
+      open.onerror = t.unreached_func('open should succeed');
+      open.onsuccess = t.step_func(function() {
+        var db = open.result;
+        if (open_func)
+          open_func(t, db, open);
+      });
+    }
+  }, description);
 }
 
 // Call with a Test and an array of expected results in order. Returns
@@ -153,35 +155,32 @@ function indexeddb_test(upgrade_func, open_func, description, options) {
 // expected number appear the order will be asserted and test
 // completed.
 function expect(t, expected) {
-    var results = [];
-    return (result) => {
-        results.push(result);
-        if (results.length === expected.length) {
-            assert_array_equals(results, expected);
-            t.done();
-        }
-    };
+  var results = [];
+  return result => {
+    results.push(result);
+    if (results.length === expected.length) {
+      assert_array_equals(results, expected);
+      t.done();
+    }
+  };
 }
 
 // Checks to see if the passed transaction is active (by making
 // requests against the named store).
 function is_transaction_active(tx, store_name) {
-    try {
-        const request = tx.objectStore(store_name).get(0);
-        request.onerror = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        };
-        return true;
-    } catch (ex) {
-        assert_equals(
-            ex.name,
-            "TransactionInactiveError",
-            "Active check should either not throw anything, or throw " +
-                "TransactionInactiveError",
-        );
-        return false;
-    }
+  try {
+    const request = tx.objectStore(store_name).get(0);
+    request.onerror = e => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    return true;
+  } catch (ex) {
+    assert_equals(ex.name, 'TransactionInactiveError',
+                  'Active check should either not throw anything, or throw ' +
+                  'TransactionInactiveError');
+    return false;
+  }
 }
 
 // Keeps the passed transaction alive indefinitely (by making requests
@@ -189,217 +188,202 @@ function is_transaction_active(tx, store_name) {
 // transaction has not already completed and then ends the request loop so that
 // the transaction may autocommit and complete.
 function keep_alive(tx, store_name) {
-    let completed = false;
-    tx.addEventListener("complete", () => {
-        completed = true;
-    });
+  let completed = false;
+  tx.addEventListener('complete', () => { completed = true; });
 
-    let keepSpinning = true;
+  let keepSpinning = true;
 
-    function spin() {
-        if (!keepSpinning) return;
-        tx.objectStore(store_name).get(0).onsuccess = spin;
-    }
-    spin();
+  function spin() {
+    if (!keepSpinning)
+      return;
+    tx.objectStore(store_name).get(0).onsuccess = spin;
+  }
+  spin();
 
-    return () => {
-        assert_false(completed, "Transaction completed while kept alive");
-        keepSpinning = false;
-    };
+  return () => {
+    assert_false(completed, 'Transaction completed while kept alive');
+    keepSpinning = false;
+  };
 }
 
 // Returns a new function. After it is called |count| times, |func|
 // will be called.
 function barrier_func(count, func) {
-    let n = 0;
-    return () => {
-        if (++n === count) func();
-    };
+  let n = 0;
+  return () => {
+    if (++n === count)
+      func();
+  };
 }
 
 // Create an IndexedDB by executing script on the given remote context
 // with |dbName| and |version|.
 async function createIndexedDBForTesting(rc, dbName, version) {
-    await rc.executeScript(
-        (dbName, version) => {
-            let request = indexedDB.open(dbName, version);
-            request.onupgradeneeded = () => {
-                if (version == 1) {
-                    // Only create the object store once.
-                    request.result.createObjectStore("store");
-                }
-            };
-            request.onversionchange = () => {
-                fail(t, "unexpectedly received versionchange event.");
-            };
-        },
-        [dbName, version],
-    );
+  await rc.executeScript((dbName, version) => {
+    let request = indexedDB.open(dbName, version);
+    request.onupgradeneeded = () => {
+      if (version == 1) {
+        // Only create the object store once.
+        request.result.createObjectStore('store');
+      }
+    }
+    request.onversionchange = () => {
+      fail(t, 'unexpectedly received versionchange event.');
+    }
+  }, [dbName, version]);
 }
 
 // Create an IndexedDB by executing script on the given remote context
 // with |dbName| and |version|, and wait for the reuslt.
 async function waitUntilIndexedDBOpenForTesting(rc, dbName, version) {
-    await rc.executeScript(
-        async (dbName, version) => {
-            await new Promise((resolve, reject) => {
-                let request = indexedDB.open(dbName, version);
-                request.onsuccess = resolve;
-                request.onerror = reject;
-            });
-        },
-        [dbName, version],
-    );
+  await rc.executeScript(async (dbName, version) => {
+    await new Promise((resolve, reject) => {
+        let request = indexedDB.open(dbName, version);
+        request.onsuccess = resolve;
+        request.onerror = reject;
+    });
+  }, [dbName, version]);
 }
 
 // Returns a detached ArrayBuffer by transferring it to a message port.
 function createDetachedArrayBuffer() {
-    const array = new Uint8Array([1, 2, 3, 4]);
-    const buffer = array.buffer;
-    assert_equals(array.byteLength, 4);
+  const array = new Uint8Array([1, 2, 3, 4]);
+  const buffer = array.buffer;
+  assert_equals(array.byteLength, 4);
 
-    const channel = new MessageChannel();
-    channel.port1.postMessage("", [buffer]);
-    assert_equals(array.byteLength, 0);
-    return array;
+  const channel = new MessageChannel();
+  channel.port1.postMessage('', [buffer]);
+  assert_equals(array.byteLength, 0);
+  return array;
 }
+
 
 // META: title=IDBFactory.deleteDatabase()
 // META: global=window,worker
 // META: script=resources/support.js
 
-("use strict");
+'use strict';
 
-async_test(
-    (t) => {
-        const delete_rq = indexedDB.deleteDatabase("db-that-doesnt-exist");
-        delete_rq.onerror = fail(t, "delete_rq.error");
-        delete_rq.onsuccess = t.step_func((e) => {
-            assert_equals(e.oldVersion, 0, "event.oldVersion");
-            assert_equals(e.target.source, null, "event.target.source");
-        });
+async_test(t => {
+  const delete_rq = indexedDB.deleteDatabase('db-that-doesnt-exist');
+  delete_rq.onerror = fail(t, 'delete_rq.error');
+  delete_rq.onsuccess = t.step_func(e => {
+    assert_equals(e.oldVersion, 0, 'event.oldVersion');
+    assert_equals(e.target.source, null, 'event.target.source');
+  });
 
-        const open_rq = createdb(t, undefined, 9);
-        open_rq.onupgradeneeded = t.step_func((e) => {});
-        open_rq.onsuccess = t.step_func((e) => {
-            const db = e.target.result;
-            db.close();
+  const open_rq = createdb(t, undefined, 9);
+  open_rq.onupgradeneeded = t.step_func(e => {});
+  open_rq.onsuccess = t.step_func(e => {
+    const db = e.target.result;
+    db.close();
 
-            const delete_rq1 = indexedDB.deleteDatabase(db.name);
-            delete_rq1.onerror = fail(t, "delete_rq1.error");
-            delete_rq1.onsuccess = t.step_func((e) => {
-                assert_equals(e.oldVersion, 9, "event.oldVersion");
-                assert_equals(e.target.source, null, "event.target.source");
-            });
-
-            const delete_rq2 = indexedDB.deleteDatabase(db.name);
-            delete_rq2.onerror = fail(t, "delete_rq2.error");
-
-            delete_rq2.onsuccess = t.step_func_done((e) => {
-                assert_equals(e.oldVersion, 0, "event.oldVersion");
-                assert_equals(e.target.source, null, "event.target.source");
-            });
-        });
-    },
-    "deleteDatabase() request should have no source, and deleting a non-existent\
- database should succeed with oldVersion of 0.",
-);
-
-async_test((t) => {
-    const open_rq = createdb(t, undefined, 9);
-
-    open_rq.onupgradeneeded = t.step_func((e) => {});
-
-    open_rq.onsuccess = t.step_func((e) => {
-        const db = e.target.result;
-        db.close();
-
-        const delete_rq = indexedDB.deleteDatabase(db.name);
-        delete_rq.onerror = t.step_func((e) => {
-            assert_unreached("Unexpected delete_rq.error event");
-        });
-
-        delete_rq.onsuccess = t.step_func((e) => {
-            assert_equals(e.target.result, undefined, "result");
-            t.done();
-        });
-    });
-}, "Result of the deleteDatabase() request is set to undefined.");
-
-async_test((t) => {
-    let db;
-    const open_rq = createdb(t, undefined, 9);
-
-    open_rq.onupgradeneeded = t.step_func((e) => {
-        db = e.target.result;
-        db.createObjectStore("os");
+    const delete_rq1 = indexedDB.deleteDatabase(db.name);
+    delete_rq1.onerror = fail(t, 'delete_rq1.error');
+    delete_rq1.onsuccess = t.step_func(e => {
+      assert_equals(e.oldVersion, 9, 'event.oldVersion');
+      assert_equals(e.target.source, null, 'event.target.source');
     });
 
-    open_rq.onsuccess = t.step_func((e) => {
-        db.close();
+    const delete_rq2 = indexedDB.deleteDatabase(db.name);
+    delete_rq2.onerror = fail(t, 'delete_rq2.error');
 
-        const delete_rq = indexedDB.deleteDatabase(db.name);
-        delete_rq.onerror = t.step_func((e) => {
-            assert_unreached("Unexpected delete_rq.error event");
-        });
-
-        delete_rq.onsuccess = t.step_func((e) => {
-            assert_equals(e.oldVersion, 9, "oldVersion");
-            assert_equals(e.newVersion, null, "newVersion");
-            assert_equals(e.target.result, undefined, "result");
-            assert_true(
-                e instanceof IDBVersionChangeEvent,
-                "e instanceof IDBVersionChangeEvent",
-            );
-            t.done();
-        });
+    delete_rq2.onsuccess = t.step_func_done(e => {
+      assert_equals(e.oldVersion, 0, 'event.oldVersion');
+      assert_equals(e.target.source, null, 'event.target.source');
     });
-}, "The deleteDatabase() request's success event is an IDBVersionChangeEvent.");
+  });
+}, 'deleteDatabase() request should have no source, and deleting a non-existent\
+ database should succeed with oldVersion of 0.');
 
-async_test(
-    (t) => {
-        const dbname = location + "-" + t.name;
+async_test(t => {
+  const open_rq = createdb(t, undefined, 9);
 
-        indexedDB.deleteDatabase(dbname);
+  open_rq.onupgradeneeded = t.step_func(e => {});
 
-        let db;
-        const openrq = indexedDB.open(dbname, 3);
+  open_rq.onsuccess = t.step_func(e => {
+    const db = e.target.result;
+    db.close();
 
-        openrq.onupgradeneeded = t.step_func((e) => {
-            e.target.result.createObjectStore("store");
-        });
+    const delete_rq = indexedDB.deleteDatabase(db.name);
+    delete_rq.onerror = t.step_func(e => {
+      assert_unreached('Unexpected delete_rq.error event');
+    });
 
-        openrq.onsuccess = t.step_func((e) => {
-            db = e.target.result;
+    delete_rq.onsuccess = t.step_func(e => {
+      assert_equals(e.target.result, undefined, 'result');
+      t.done();
+    });
+  });
+}, 'Result of the deleteDatabase() request is set to undefined.');
 
-            // Errors
-            db.onversionchange = fail(t, "db.versionchange");
-            db.onerror = fail(t, "db.error");
-            db.abort = fail(t, "db.abort");
+async_test(t => {
+  let db;
+  const open_rq = createdb(t, undefined, 9);
 
-            step_timeout(
-                t.step_func(() => Second(t, dbname)),
-                4,
-            );
-            db.close();
-        });
+  open_rq.onupgradeneeded = t.step_func(e => {
+    db = e.target.result;
+    db.createObjectStore('os');
+  });
 
-        // Errors
-        openrq.onerror = fail(t, "open.error");
-        openrq.onblocked = fail(t, "open.blocked");
-    },
-    "Delete an existing database - Test events opening a second \
-database when one connection is open already",
-);
+  open_rq.onsuccess = t.step_func(e => {
+    db.close();
+
+    const delete_rq = indexedDB.deleteDatabase(db.name);
+    delete_rq.onerror = t.step_func(e => {
+      assert_unreached('Unexpected delete_rq.error event');
+    });
+
+    delete_rq.onsuccess = t.step_func(e => {
+      assert_equals(e.oldVersion, 9, 'oldVersion');
+      assert_equals(e.newVersion, null, 'newVersion');
+      assert_equals(e.target.result, undefined, 'result');
+      assert_true(
+          e instanceof IDBVersionChangeEvent,
+          'e instanceof IDBVersionChangeEvent');
+      t.done();
+    });
+  });
+}, 'The deleteDatabase() request\'s success event is an IDBVersionChangeEvent.');
+
+async_test(t => {
+  const dbname = location + '-' + t.name;
+
+  indexedDB.deleteDatabase(dbname);
+
+  let db;
+  const openrq = indexedDB.open(dbname, 3);
+
+  openrq.onupgradeneeded = t.step_func(e => {
+    e.target.result.createObjectStore('store');
+  });
+
+  openrq.onsuccess = t.step_func(e => {
+    db = e.target.result;
+
+    // Errors
+    db.onversionchange = fail(t, 'db.versionchange');
+    db.onerror = fail(t, 'db.error');
+    db.abort = fail(t, 'db.abort');
+
+    step_timeout(t.step_func(() => Second(t, dbname)), 4);
+    db.close();
+  });
+
+  // Errors
+  openrq.onerror = fail(t, 'open.error');
+  openrq.onblocked = fail(t, 'open.blocked');
+}, 'Delete an existing database - Test events opening a second \
+database when one connection is open already');
 
 function Second(t, dbname) {
-    const deleterq = indexedDB.deleteDatabase(dbname);
+  const deleterq = indexedDB.deleteDatabase(dbname);
 
-    deleterq.onsuccess = (e) => {
-        t.done();
-    };
+  deleterq.onsuccess = e => {
+    t.done();
+  };
 
-    deleterq.onerror = fail(t, "delete.error");
-    deleterq.onblocked = fail(t, "delete.blocked");
-    deleterq.onupgradeneeded = fail(t, "delete.upgradeneeded");
+  deleterq.onerror = fail(t, 'delete.error');
+  deleterq.onblocked = fail(t, 'delete.blocked');
+  deleterq.onupgradeneeded = fail(t, 'delete.upgradeneeded');
 }

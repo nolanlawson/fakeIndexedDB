@@ -1,6 +1,6 @@
 import "../wpt-env.js";
 
-let cursor, db, result, store, value;
+let cursor,db,result,store,value;
 
 globalThis.title = "IDBObjectStore.delete() and IDBCursor.continue()";
 
@@ -8,9 +8,12 @@ globalThis.title = "IDBObjectStore.delete() and IDBCursor.continue()";
  *
  * Go through each finished test, see if it has an associated database. Close
  * that and delete the database. */
-add_completion_callback(function (tests) {
-    for (var i in tests) {
-        if (tests[i].db) {
+add_completion_callback(function(tests)
+{
+    for (var i in tests)
+    {
+        if(tests[i].db)
+        {
             tests[i].db.close();
             self.indexedDB.deleteDatabase(tests[i].db.name);
         }
@@ -18,20 +21,20 @@ add_completion_callback(function (tests) {
 });
 
 function fail(test, desc) {
-    return test.step_func(function (e) {
+    return test.step_func(function(e) {
         if (e && e.message && e.target.error)
-            assert_unreached(
-                desc + " (" + e.target.error.name + ": " + e.message + ")",
-            );
+            assert_unreached(desc + " (" + e.target.error.name + ": " + e.message + ")");
         else if (e && e.message)
             assert_unreached(desc + " (" + e.message + ")");
-        else if (e && e.target.readyState === "done" && e.target.error)
+        else if (e && e.target.readyState === 'done' && e.target.error)
             assert_unreached(desc + " (" + e.target.error.name + ")");
-        else assert_unreached(desc);
+        else
+            assert_unreached(desc);
     });
 }
 
-function createdb(test, dbname, version) {
+function createdb(test, dbname, version)
+{
     var rq_open = createdb_for_multiple_tests(dbname, version);
     return rq_open.setTest(test);
 }
@@ -40,54 +43,52 @@ function createdb_for_multiple_tests(dbname, version) {
     var rq_open,
         fake_open = {},
         test = null,
-        dbname = dbname
-            ? dbname
-            : "testdb-" + new Date().getTime() + Math.random();
+        dbname = (dbname ? dbname : "testdb-" + new Date().getTime() + Math.random() );
 
-    if (version) rq_open = self.indexedDB.open(dbname, version);
-    else rq_open = self.indexedDB.open(dbname);
+    if (version)
+        rq_open = self.indexedDB.open(dbname, version);
+    else
+        rq_open = self.indexedDB.open(dbname);
 
     function auto_fail(evt, current_test) {
         /* Fail handlers, if we haven't set on/whatever/, don't
          * expect to get event whatever. */
         rq_open.manually_handled = {};
 
-        rq_open.addEventListener(evt, function (e) {
+        rq_open.addEventListener(evt, function(e) {
             if (current_test !== test) {
                 return;
             }
 
-            test.step(function () {
+            test.step(function() {
                 if (!rq_open.manually_handled[evt]) {
                     assert_unreached("unexpected open." + evt + " event");
                 }
 
-                if (
-                    e.target.result + "" == "[object IDBDatabase]" &&
-                    !this.db
-                ) {
-                    this.db = e.target.result;
+                if (e.target.result + '' == '[object IDBDatabase]' &&
+                    !this.db) {
+                  this.db = e.target.result;
 
-                    this.db.onerror = fail(test, "unexpected db.error");
-                    this.db.onabort = fail(test, "unexpected db.abort");
-                    this.db.onversionchange = fail(
-                        test,
-                        "unexpected db.versionchange",
-                    );
+                  this.db.onerror = fail(test, 'unexpected db.error');
+                  this.db.onabort = fail(test, 'unexpected db.abort');
+                  this.db.onversionchange =
+                      fail(test, 'unexpected db.versionchange');
                 }
             });
         });
-        rq_open.__defineSetter__("on" + evt, function (h) {
+        rq_open.__defineSetter__("on" + evt, function(h) {
             rq_open.manually_handled[evt] = true;
-            if (!h) rq_open.addEventListener(evt, function () {});
-            else rq_open.addEventListener(evt, test.step_func(h));
+            if (!h)
+                rq_open.addEventListener(evt, function() {});
+            else
+                rq_open.addEventListener(evt, test.step_func(h));
         });
     }
 
     // add a .setTest method to the IDBOpenDBRequest object
-    Object.defineProperty(rq_open, "setTest", {
+    Object.defineProperty(rq_open, 'setTest', {
         enumerable: false,
-        value: function (t) {
+        value: function(t) {
             test = t;
 
             auto_fail("upgradeneeded", test);
@@ -96,14 +97,14 @@ function createdb_for_multiple_tests(dbname, version) {
             auto_fail("error", test);
 
             return this;
-        },
+        }
     });
 
     return rq_open;
 }
 
 function assert_key_equals(actual, expected, description) {
-    assert_equals(indexedDB.cmp(actual, expected), 0, description);
+  assert_equals(indexedDB.cmp(actual, expected), 0, description);
 }
 
 // Usage:
@@ -117,35 +118,36 @@ function assert_key_equals(actual, expected, description) {
 //     },
 //     'Test case description');
 function indexeddb_test(upgrade_func, open_func, description, options) {
-    async_test(function (t) {
-        options = Object.assign({ upgrade_will_abort: false }, options);
-        var dbname = location + "-" + t.name;
-        var del = indexedDB.deleteDatabase(dbname);
-        del.onerror = t.unreached_func("deleteDatabase should succeed");
-        var open = indexedDB.open(dbname, 1);
-        open.onupgradeneeded = t.step_func(function () {
-            var db = open.result;
-            t.add_cleanup(function () {
-                // If open didn't succeed already, ignore the error.
-                open.onerror = function (e) {
-                    e.preventDefault();
-                };
-                db.close();
-                indexedDB.deleteDatabase(db.name);
-            });
-            var tx = open.transaction;
-            upgrade_func(t, db, tx, open);
-        });
-        if (options.upgrade_will_abort) {
-            open.onsuccess = t.unreached_func("open should not succeed");
-        } else {
-            open.onerror = t.unreached_func("open should succeed");
-            open.onsuccess = t.step_func(function () {
-                var db = open.result;
-                if (open_func) open_func(t, db, open);
-            });
-        }
-    }, description);
+  async_test(function(t) {
+    options = Object.assign({upgrade_will_abort: false}, options);
+    var dbname = location + '-' + t.name;
+    var del = indexedDB.deleteDatabase(dbname);
+    del.onerror = t.unreached_func('deleteDatabase should succeed');
+    var open = indexedDB.open(dbname, 1);
+    open.onupgradeneeded = t.step_func(function() {
+      var db = open.result;
+      t.add_cleanup(function() {
+        // If open didn't succeed already, ignore the error.
+        open.onerror = function(e) {
+          e.preventDefault();
+        };
+        db.close();
+        indexedDB.deleteDatabase(db.name);
+      });
+      var tx = open.transaction;
+      upgrade_func(t, db, tx, open);
+    });
+    if (options.upgrade_will_abort) {
+      open.onsuccess = t.unreached_func('open should not succeed');
+    } else {
+      open.onerror = t.unreached_func('open should succeed');
+      open.onsuccess = t.step_func(function() {
+        var db = open.result;
+        if (open_func)
+          open_func(t, db, open);
+      });
+    }
+  }, description);
 }
 
 // Call with a Test and an array of expected results in order. Returns
@@ -153,35 +155,32 @@ function indexeddb_test(upgrade_func, open_func, description, options) {
 // expected number appear the order will be asserted and test
 // completed.
 function expect(t, expected) {
-    var results = [];
-    return (result) => {
-        results.push(result);
-        if (results.length === expected.length) {
-            assert_array_equals(results, expected);
-            t.done();
-        }
-    };
+  var results = [];
+  return result => {
+    results.push(result);
+    if (results.length === expected.length) {
+      assert_array_equals(results, expected);
+      t.done();
+    }
+  };
 }
 
 // Checks to see if the passed transaction is active (by making
 // requests against the named store).
 function is_transaction_active(tx, store_name) {
-    try {
-        const request = tx.objectStore(store_name).get(0);
-        request.onerror = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        };
-        return true;
-    } catch (ex) {
-        assert_equals(
-            ex.name,
-            "TransactionInactiveError",
-            "Active check should either not throw anything, or throw " +
-                "TransactionInactiveError",
-        );
-        return false;
-    }
+  try {
+    const request = tx.objectStore(store_name).get(0);
+    request.onerror = e => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    return true;
+  } catch (ex) {
+    assert_equals(ex.name, 'TransactionInactiveError',
+                  'Active check should either not throw anything, or throw ' +
+                  'TransactionInactiveError');
+    return false;
+  }
 }
 
 // Keeps the passed transaction alive indefinitely (by making requests
@@ -189,186 +188,180 @@ function is_transaction_active(tx, store_name) {
 // transaction has not already completed and then ends the request loop so that
 // the transaction may autocommit and complete.
 function keep_alive(tx, store_name) {
-    let completed = false;
-    tx.addEventListener("complete", () => {
-        completed = true;
-    });
+  let completed = false;
+  tx.addEventListener('complete', () => { completed = true; });
 
-    let keepSpinning = true;
+  let keepSpinning = true;
 
-    function spin() {
-        if (!keepSpinning) return;
-        tx.objectStore(store_name).get(0).onsuccess = spin;
-    }
-    spin();
+  function spin() {
+    if (!keepSpinning)
+      return;
+    tx.objectStore(store_name).get(0).onsuccess = spin;
+  }
+  spin();
 
-    return () => {
-        assert_false(completed, "Transaction completed while kept alive");
-        keepSpinning = false;
-    };
+  return () => {
+    assert_false(completed, 'Transaction completed while kept alive');
+    keepSpinning = false;
+  };
 }
 
 // Returns a new function. After it is called |count| times, |func|
 // will be called.
 function barrier_func(count, func) {
-    let n = 0;
-    return () => {
-        if (++n === count) func();
-    };
+  let n = 0;
+  return () => {
+    if (++n === count)
+      func();
+  };
 }
 
 // Create an IndexedDB by executing script on the given remote context
 // with |dbName| and |version|.
 async function createIndexedDBForTesting(rc, dbName, version) {
-    await rc.executeScript(
-        (dbName, version) => {
-            let request = indexedDB.open(dbName, version);
-            request.onupgradeneeded = () => {
-                if (version == 1) {
-                    // Only create the object store once.
-                    request.result.createObjectStore("store");
-                }
-            };
-            request.onversionchange = () => {
-                fail(t, "unexpectedly received versionchange event.");
-            };
-        },
-        [dbName, version],
-    );
+  await rc.executeScript((dbName, version) => {
+    let request = indexedDB.open(dbName, version);
+    request.onupgradeneeded = () => {
+      if (version == 1) {
+        // Only create the object store once.
+        request.result.createObjectStore('store');
+      }
+    }
+    request.onversionchange = () => {
+      fail(t, 'unexpectedly received versionchange event.');
+    }
+  }, [dbName, version]);
 }
 
 // Create an IndexedDB by executing script on the given remote context
 // with |dbName| and |version|, and wait for the reuslt.
 async function waitUntilIndexedDBOpenForTesting(rc, dbName, version) {
-    await rc.executeScript(
-        async (dbName, version) => {
-            await new Promise((resolve, reject) => {
-                let request = indexedDB.open(dbName, version);
-                request.onsuccess = resolve;
-                request.onerror = reject;
-            });
-        },
-        [dbName, version],
-    );
+  await rc.executeScript(async (dbName, version) => {
+    await new Promise((resolve, reject) => {
+        let request = indexedDB.open(dbName, version);
+        request.onsuccess = resolve;
+        request.onerror = reject;
+    });
+  }, [dbName, version]);
 }
 
 // Returns a detached ArrayBuffer by transferring it to a message port.
 function createDetachedArrayBuffer() {
-    const array = new Uint8Array([1, 2, 3, 4]);
-    const buffer = array.buffer;
-    assert_equals(array.byteLength, 4);
+  const array = new Uint8Array([1, 2, 3, 4]);
+  const buffer = array.buffer;
+  assert_equals(array.byteLength, 4);
 
-    const channel = new MessageChannel();
-    channel.port1.postMessage("", [buffer]);
-    assert_equals(array.byteLength, 0);
-    return array;
+  const channel = new MessageChannel();
+  channel.port1.postMessage('', [buffer]);
+  assert_equals(array.byteLength, 0);
+  return array;
 }
+
 
 // META: title=IDBObjectStore.delete() and IDBCursor.continue()
 // META: global=window,worker
 // META: script=resources/support.js
 
-("use strict");
+'use strict';
 
-async_test((t) => {
-    /* The goal here is to test that any prefetching of cursor values performs
-     * correct invalidation of prefetched data.  This test is motivated by the
-     * particularities of the Firefox implementation of preloading, and is
-     * specifically motivated by an edge case when prefetching prefetches at
-     * least 2 extra records and at most determines whether a mutation is
-     * potentially relevant based on current cursor position and direction and
-     * does not test for key equivalence.  Future implementations may want to
-     * help refine this test if their cursors are more clever.
-     *
-     * Step-wise we:
-     * - Open a cursor, returning key 0.
-     * - When the cursor request completes, without yielding control:
-     *   - Issue a delete() call that won't actually delete anything but looks
-     *     relevant.  This should purge prefetched records 1 and 2.
-     *   - Issue a continue() which should result in record 1 being fetched
-     *     again and record 2 being prefetched again.
-     *   - Delete record 2.  Unless there's a synchronously available source
-     *     of truth, the data from continue() above will not be present and
-     *     we'll expect the implementation to need to set a flag to invalidate
-     *     the prefetched data when it arrives.
-     * - When the cursor request completes, validate we got record 1 and issue
-     *   a continue.
-     * - When the request completes, we should have a null cursor result value
-     *   because 2 was deleted.
-     */
-    let db;
-    let count = 0;
-    const records = [
-        { pKey: "primaryKey_0" },
-        { pKey: "primaryKey_1" },
-        { pKey: "primaryKey_2" },
-    ];
+async_test(t => {
+  /* The goal here is to test that any prefetching of cursor values performs
+   * correct invalidation of prefetched data.  This test is motivated by the
+   * particularities of the Firefox implementation of preloading, and is
+   * specifically motivated by an edge case when prefetching prefetches at
+   * least 2 extra records and at most determines whether a mutation is
+   * potentially relevant based on current cursor position and direction and
+   * does not test for key equivalence.  Future implementations may want to
+   * help refine this test if their cursors are more clever.
+   *
+   * Step-wise we:
+   * - Open a cursor, returning key 0.
+   * - When the cursor request completes, without yielding control:
+   *   - Issue a delete() call that won't actually delete anything but looks
+   *     relevant.  This should purge prefetched records 1 and 2.
+   *   - Issue a continue() which should result in record 1 being fetched
+   *     again and record 2 being prefetched again.
+   *   - Delete record 2.  Unless there's a synchronously available source
+   *     of truth, the data from continue() above will not be present and
+   *     we'll expect the implementation to need to set a flag to invalidate
+   *     the prefetched data when it arrives.
+   * - When the cursor request completes, validate we got record 1 and issue
+   *   a continue.
+   * - When the request completes, we should have a null cursor result value
+   *   because 2 was deleted.
+   */
+  let db;
+  let count = 0;
+  const records =
+      [{pKey: 'primaryKey_0'}, {pKey: 'primaryKey_1'}, {pKey: 'primaryKey_2'}];
 
-    // This is a key that is not present in the database, but that is known to
-    // be relevant to a forward iteration of the above keys by comparing to be
-    // greater than all of them.
-    const plausibleFutureKey = "primaryKey_9";
+  // This is a key that is not present in the database, but that is known to
+  // be relevant to a forward iteration of the above keys by comparing to be
+  // greater than all of them.
+  const plausibleFutureKey = 'primaryKey_9';
 
-    let open_rq = createdb(t);
-    open_rq.onupgradeneeded = function (e) {
-        db = e.target.result;
+  let open_rq = createdb(t);
+  open_rq.onupgradeneeded = function(e) {
+    db = e.target.result;
 
-        let objStore = db.createObjectStore("test", { keyPath: "pKey" });
+    let objStore = db.createObjectStore('test', {keyPath: 'pKey'});
 
-        for (let i = 0; i < records.length; i++) objStore.add(records[i]);
-    };
+    for (let i = 0; i < records.length; i++)
+      objStore.add(records[i]);
+  };
 
-    open_rq.onsuccess = t.step_func(CursorDeleteRecord);
+  open_rq.onsuccess = t.step_func(CursorDeleteRecord);
 
-    function CursorDeleteRecord(e) {
-        let txn = db.transaction("test", "readwrite");
-        let object_store = txn.objectStore("test");
-        let cursor_rq = object_store.openCursor();
-        let iteration = 0;
 
-        cursor_rq.onsuccess = t.step_func(function (e) {
-            let cursor = e.target.result;
+  function CursorDeleteRecord(e) {
+    let txn = db.transaction('test', 'readwrite');
+    let object_store = txn.objectStore('test');
+    let cursor_rq = object_store.openCursor();
+    let iteration = 0;
 
-            switch (iteration) {
-                case 0:
-                    object_store.delete(plausibleFutureKey);
-                    assert_true(cursor != null, "cursor valid");
-                    assert_equals(cursor.value.pKey, records[iteration].pKey);
-                    cursor.continue();
-                    object_store.delete(records[2].pKey);
-                    break;
-                case 1:
-                    assert_true(cursor != null, "cursor valid");
-                    assert_equals(cursor.value.pKey, records[iteration].pKey);
-                    cursor.continue();
-                    break;
-                case 2:
-                    assert_equals(cursor, null, "cursor no longer valid");
-                    break;
-            }
-            iteration++;
-        });
+    cursor_rq.onsuccess = t.step_func(function(e) {
+      let cursor = e.target.result;
 
-        txn.oncomplete = t.step_func(VerifyRecordWasDeleted);
-    }
+      switch (iteration) {
+        case 0:
+          object_store.delete(plausibleFutureKey);
+          assert_true(cursor != null, 'cursor valid');
+          assert_equals(cursor.value.pKey, records[iteration].pKey);
+          cursor.continue();
+          object_store.delete(records[2].pKey);
+          break;
+        case 1:
+          assert_true(cursor != null, 'cursor valid');
+          assert_equals(cursor.value.pKey, records[iteration].pKey);
+          cursor.continue();
+          break;
+        case 2:
+          assert_equals(cursor, null, 'cursor no longer valid');
+          break;
+      };
+      iteration++;
+    });
 
-    function VerifyRecordWasDeleted(e) {
-        let cursor_rq = db
-            .transaction("test", "readonly")
-            .objectStore("test")
-            .openCursor();
+    txn.oncomplete = t.step_func(VerifyRecordWasDeleted);
+  }
 
-        cursor_rq.onsuccess = t.step_func(function (e) {
-            let cursor = e.target.result;
 
-            if (!cursor) {
-                assert_equals(count, 2, "count");
-                t.done();
-            }
+  function VerifyRecordWasDeleted(e) {
+    let cursor_rq = db.transaction('test', 'readonly')
+                        .objectStore('test')
+                        .openCursor();
 
-            assert_equals(cursor.value.pKey, records[count].pKey);
-            count++;
-            cursor.continue();
-        });
-    }
-}, "Object store - remove a record from the object store while iterating cursor");
+    cursor_rq.onsuccess = t.step_func(function(e) {
+      let cursor = e.target.result;
+
+      if (!cursor) {
+        assert_equals(count, 2, 'count');
+        t.done();
+      }
+
+      assert_equals(cursor.value.pKey, records[count].pKey);
+      count++;
+      cursor.continue();
+    });
+  }
+}, 'Object store - remove a record from the object store while iterating cursor');
