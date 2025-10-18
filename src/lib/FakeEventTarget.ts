@@ -25,21 +25,26 @@ export default class FakeEventTarget extends EventTarget {
                 ? callbackOrListenersObject
                 : callbackOrListenersObject.handleEvent;
 
-        const wrappedCallback: EventListener = (result) => {
-            try {
-                callback(result);
-            } catch (err) {
-                if (this._errorHandler) {
-                    this._errorHandler(err);
-                } else {
-                    throw err;
-                }
-            }
-        };
-        listenersToWrappedListeners.set(
+        let wrappedCallback = listenersToWrappedListeners.get(
             callbackOrListenersObject,
-            wrappedCallback,
         );
+        if (!wrappedCallback) {
+            wrappedCallback = (result) => {
+                try {
+                    callback(result);
+                } catch (err) {
+                    if (this._errorHandler) {
+                        this._errorHandler(err);
+                    } else {
+                        throw err;
+                    }
+                }
+            };
+            listenersToWrappedListeners.set(
+                callbackOrListenersObject,
+                wrappedCallback,
+            );
+        }
         super.addEventListener(type, wrappedCallback, options);
     }
 
@@ -56,4 +61,25 @@ export default class FakeEventTarget extends EventTarget {
             listenersToWrappedListeners.get(callbackOrListenersObject) ?? null;
         super.removeEventListener(type, wrappedCallback, options);
     }
+}
+
+// just to make sure we don't forget to define the ones we need
+for (const event of [
+    "abort",
+    "blocked",
+    "close",
+    "complete",
+    "error",
+    "success",
+    "upgradeneeded",
+    "versionchange",
+]) {
+    Object.defineProperty(FakeEventTarget.prototype, `on${event}`, {
+        get() {
+            throw new Error(`on${event} must be defined`);
+        },
+        set() {
+            throw new Error(`on${event} must be defined`);
+        },
+    });
 }
