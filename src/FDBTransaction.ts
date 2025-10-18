@@ -22,6 +22,7 @@ import type {
 import type FDBOpenDBRequest from "./FDBOpenDBRequest.js";
 import type ObjectStore from "./lib/ObjectStore.js";
 import type Index from "./lib/Index.js";
+import dispatchEventWithErrorHandling from "./lib/dispatchEventWithErrorHandling.js";
 
 // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#transaction
 class FDBTransaction extends FakeEventTarget {
@@ -293,7 +294,13 @@ class FDBTransaction extends FakeEventTarget {
                 }
 
                 try {
-                    dispatchBubblingEvent(request, event, [this.db, this]);
+                    if (event.bubbles) {
+                        // error event, bubbles
+                        dispatchBubblingEvent(request, event, [this.db, this]);
+                    } else {
+                        // success, does not bubble
+                        dispatchEventWithErrorHandling(request, event);
+                    }
                 } catch (_err) {
                     if (this._state === "active") {
                         this._abort("AbortError");
