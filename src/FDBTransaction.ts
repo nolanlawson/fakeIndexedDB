@@ -128,11 +128,11 @@ class FDBTransaction extends EventTarget {
                     );
             }
             // Fire an event named abort at transaction with its bubbles attribute initialized to true.
-            const event = new Event("abort", {
+            const event = new FakeEvent("abort", {
                 bubbles: true,
                 cancelable: false,
             });
-            this.dispatchEvent(event);
+            dispatchBubblingEvent(this, event, [this.db]);
 
             // If transaction is an upgrade transaction, then:
             if (isUpgradeTransaction) {
