@@ -402,7 +402,7 @@ class FDBFactory {
                             bubbles: true,
                             cancelable: true,
                         });
-                        request.dispatchEvent(event);
+                        dispatchEventWithErrorHandling(request, event);
 
                         return;
                     }
@@ -414,7 +414,7 @@ class FDBFactory {
                         newVersion: null,
                         oldVersion,
                     });
-                    request.dispatchEvent(event2);
+                    dispatchEventWithErrorHandling(request, event2);
                 },
             );
         });

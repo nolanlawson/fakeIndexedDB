@@ -1,4 +1,7 @@
-const listenersToWrappedListeners = new WeakMap<EventListener, EventListener>();
+const listenersToWrappedListeners = new WeakMap<
+    EventListenerOrEventListenerObject,
+    EventListener
+>();
 
 /**
  * Same as EventTarget but gives us a way to observe errors thrown by listeners.
@@ -33,7 +36,10 @@ export default class FakeEventTarget extends EventTarget {
                 }
             }
         };
-        listenersToWrappedListeners.set(callback, wrappedCallback);
+        listenersToWrappedListeners.set(
+            callbackOrListenersObject,
+            wrappedCallback,
+        );
         super.addEventListener(type, wrappedCallback, options);
     }
 
@@ -46,13 +52,8 @@ export default class FakeEventTarget extends EventTarget {
             throw new Error("Must supply a callback");
         }
 
-        const callback =
-            typeof callbackOrListenersObject === "function"
-                ? callbackOrListenersObject
-                : callbackOrListenersObject.handleEvent;
-
         const wrappedCallback =
-            listenersToWrappedListeners.get(callback) ?? callback;
+            listenersToWrappedListeners.get(callbackOrListenersObject) ?? null;
         super.removeEventListener(type, wrappedCallback, options);
     }
 }
