@@ -10,6 +10,7 @@ import FakeDOMStringList from "./lib/FakeDOMStringList.js";
 import ObjectStore from "./lib/ObjectStore.js";
 import validateKeyPath from "./lib/validateKeyPath.js";
 import closeConnection from "./lib/closeConnection.js";
+import FakeEventTarget from "./lib/FakeEventTarget.js";
 import type {
     FDBTransactionOptions,
     KeyPath,
@@ -40,7 +41,7 @@ const confirmActiveVersionchangeTransaction = (database: FDBDatabase) => {
 };
 
 // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#database-interface
-class FDBDatabase extends EventTarget {
+class FDBDatabase extends FakeEventTarget {
     public _closePending = false;
     public _closed = false;
     public _runningVersionchangeTransaction = false;

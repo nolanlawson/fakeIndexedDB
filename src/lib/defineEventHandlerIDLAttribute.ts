@@ -12,7 +12,11 @@ export function defineEventHandlerIDLAttribute<
             return value;
         },
         set(newValue: EventListener | null) {
-            if (value === null || value === undefined) {
+            if (
+                (newValue === null || newValue === undefined) &&
+                value !== null &&
+                value !== undefined
+            ) {
                 this.removeEventListener(eventName, value);
             }
             if (newValue !== null && newValue !== undefined) {

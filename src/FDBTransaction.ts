@@ -11,6 +11,7 @@ import { queueTask } from "./lib/scheduling.js";
 import { defineEventHandlerIDLAttribute } from "./lib/defineEventHandlerIDLAttribute.js";
 import { dispatchBubblingEvent } from "./lib/dispatchBubblingEvent.js";
 import FakeEvent from "./lib/FakeEvent.js";
+import FakeEventTarget from "./lib/FakeEventTarget.js";
 import type FDBDatabase from "./FDBDatabase.js";
 import type {
     FDBTransactionDurability,
@@ -23,7 +24,7 @@ import type ObjectStore from "./lib/ObjectStore.js";
 import type Index from "./lib/Index.js";
 
 // http://www.w3.org/TR/2015/REC-IndexedDB-20150108/#transaction
-class FDBTransaction extends EventTarget {
+class FDBTransaction extends FakeEventTarget {
     public _state: "active" | "inactive" | "committing" | "finished" = "active";
     public _started = false;
     public _rollbackLog: RollbackLog = [];

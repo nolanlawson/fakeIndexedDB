@@ -1,11 +1,12 @@
 import { InvalidStateError } from "./lib/errors.js";
 import { defineEventHandlerIDLAttribute } from "./lib/defineEventHandlerIDLAttribute.js";
+import FakeEventTarget from "./lib/FakeEventTarget.js";
 import type FDBCursor from "./FDBCursor.js";
 import type FDBIndex from "./FDBIndex.js";
 import type FDBObjectStore from "./FDBObjectStore.js";
 import type FDBTransaction from "./FDBTransaction.js";
 
-class FDBRequest extends EventTarget {
+class FDBRequest extends FakeEventTarget {
     public _result: any = null;
     public _error: Error | null | undefined = null;
     public source: FDBCursor | FDBIndex | FDBObjectStore | null = null;

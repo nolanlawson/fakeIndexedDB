@@ -7,6 +7,7 @@ import enforceRange from "./lib/enforceRange.js";
 import { AbortError, VersionError } from "./lib/errors.js";
 import { queueTask } from "./lib/scheduling.js";
 import { validateRequiredArguments } from "./lib/validateRequiredArguments.js";
+import dispatchEventWithErrorHandling from "./lib/dispatchEventWithErrorHandling.js";
 import type { FDBDatabaseInfo } from "./lib/types.js";
 
 // https://w3c.github.io/IndexedDB/#connection-queue
@@ -237,7 +238,7 @@ const runVersionchangeTransaction = (
             });
             let didThrow = false;
             try {
-                request.dispatchEvent(event);
+                dispatchEventWithErrorHandling(request, event);
             } catch (_err) {
                 didThrow = true;
             }
