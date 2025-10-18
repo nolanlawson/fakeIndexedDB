@@ -265,13 +265,13 @@ const runVersionchangeTransaction = (
                 queueTask(concludeUpgrade);
             }
 
-            transaction.addEventListener("error", () => {
+            transaction._addPrioritizedListener("error", () => {
                 connection._runningVersionchangeTransaction = false;
                 connection._oldVersion = undefined;
                 // throw arguments[0].target.error;
                 // console.log("error in versionchange transaction - not sure if anything needs to be done here", e.target.error.name);
             });
-            transaction.addEventListener("abort", () => {
+            transaction._addPrioritizedListener("abort", () => {
                 connection._runningVersionchangeTransaction = false;
                 connection._oldVersion = undefined;
                 request.transaction = null;
@@ -279,7 +279,7 @@ const runVersionchangeTransaction = (
                     cb(new AbortError());
                 });
             });
-            transaction.addEventListener("complete", () => {
+            transaction._addPrioritizedListener("complete", () => {
                 connection._runningVersionchangeTransaction = false;
                 connection._oldVersion = undefined;
                 request.transaction = null;

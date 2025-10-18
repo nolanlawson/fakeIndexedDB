@@ -40,6 +40,11 @@ class FDBTransaction extends FakeEventTarget {
     public oncomplete!: EventListener | null;
     public onerror!: EventListener | null;
 
+    private _prioritizedListeners: Map<
+        "error" | "abort" | "complete",
+        Array<() => void>
+    > = new Map();
+
     public _scope: Set<string>;
     private _requests: {
         operation: () => void;
@@ -64,6 +69,27 @@ class FDBTransaction extends FakeEventTarget {
         this.objectStoreNames = new FakeDOMStringList(
             ...Array.from(this._scope).sort(),
         );
+
+        for (const type of ["error", "abort", "complete"] as const) {
+            this.addEventListener(type, () => {
+                for (const listener of this._prioritizedListeners.get(type) ??
+                    []) {
+                    listener();
+                }
+            });
+        }
+    }
+
+    public _addPrioritizedListener(
+        type: "error" | "abort" | "complete",
+        listener: () => void,
+    ) {
+        let listeners = this._prioritizedListeners.get(type);
+        if (!listeners) {
+            listeners = [];
+            this._prioritizedListeners.set(type, listeners);
+        }
+        listeners.push(listener);
     }
 
     // https://w3c.github.io/IndexedDB/#abort-transaction
