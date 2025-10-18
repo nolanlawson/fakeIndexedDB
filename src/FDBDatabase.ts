@@ -11,6 +11,7 @@ import ObjectStore from "./lib/ObjectStore.js";
 import validateKeyPath from "./lib/validateKeyPath.js";
 import closeConnection from "./lib/closeConnection.js";
 import FakeEventTarget from "./lib/FakeEventTarget.js";
+import { defineEventHandlerIDLAttribute } from "./lib/defineEventHandlerIDLAttribute.js";
 import type {
     FDBTransactionOptions,
     KeyPath,
@@ -51,6 +52,8 @@ class FDBDatabase extends FakeEventTarget {
     public name: string;
     public version: number;
     public objectStoreNames: FakeDOMStringList;
+
+    public onerror!: EventListener | null;
 
     constructor(rawDatabase: Database) {
         super();
@@ -257,5 +260,7 @@ class FDBDatabase extends FakeEventTarget {
         return "IDBDatabase";
     }
 }
+
+defineEventHandlerIDLAttribute(FDBDatabase.prototype, "onerror");
 
 export default FDBDatabase;
