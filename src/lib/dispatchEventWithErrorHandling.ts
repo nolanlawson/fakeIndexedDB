@@ -6,6 +6,9 @@ export default function dispatchEventWithErrorHandling(
     event: Event,
 ) {
     const errors: Error[] = [];
+    if (target._errorHandler) {
+        throw new Error("Assert: no pre-existing error handler");
+    }
     target._errorHandler = (err) => {
         errors.push(err);
     };
