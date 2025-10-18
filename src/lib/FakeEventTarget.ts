@@ -20,17 +20,16 @@ export default class FakeEventTarget extends EventTarget {
             throw new Error("Must supply a callback");
         }
 
-        const callback =
-            typeof callbackOrListenersObject === "function"
-                ? callbackOrListenersObject
-                : callbackOrListenersObject.handleEvent;
-
         let wrappedCallback = listenersToWrappedListeners.get(
             callbackOrListenersObject,
         );
         if (!wrappedCallback) {
             wrappedCallback = (result) => {
                 try {
+                    const callback =
+                        typeof callbackOrListenersObject === "function"
+                            ? callbackOrListenersObject
+                            : callbackOrListenersObject.handleEvent;
                     callback(result);
                 } catch (err) {
                     if (this._errorHandler) {
