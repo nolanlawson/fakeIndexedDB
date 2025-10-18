@@ -54,6 +54,8 @@ class FDBDatabase extends FakeEventTarget {
     public objectStoreNames: FakeDOMStringList;
 
     public onerror!: EventListener | null;
+    public onabort!: EventListener | null;
+    public onversionchange!: EventListener | null;
 
     constructor(rawDatabase: Database) {
         super();
@@ -262,5 +264,7 @@ class FDBDatabase extends FakeEventTarget {
 }
 
 defineEventHandlerIDLAttribute(FDBDatabase.prototype, "onerror");
+defineEventHandlerIDLAttribute(FDBDatabase.prototype, "onabort");
+defineEventHandlerIDLAttribute(FDBDatabase.prototype, "onversionchange");
 
 export default FDBDatabase;
