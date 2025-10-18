@@ -40,6 +40,7 @@ export default class FakeEventTarget extends EventTarget {
                     }
                 }
             };
+            (wrappedCallback as any)._original = callbackOrListenersObject;
             listenersToWrappedListeners.set(
                 callbackOrListenersObject,
                 wrappedCallback,
