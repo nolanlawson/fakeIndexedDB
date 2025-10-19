@@ -27,6 +27,9 @@ global.VersionError = VersionError;
 // idlharness.js sniffs for this to detect this as a "window" realm
 global.Window = function Window() {};
 
+// idlharness.js sniffs for this to detect this as a "window" realm
+global.Window = function Window() {};
+
 global.FileReader = class FileReader {
     async readAsArrayBuffer(blob) {
         this.result = await blob.arrayBuffer();
