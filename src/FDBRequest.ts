@@ -4,6 +4,7 @@ import type FDBCursor from "./FDBCursor.js";
 import type FDBIndex from "./FDBIndex.js";
 import type FDBObjectStore from "./FDBObjectStore.js";
 import type FDBTransaction from "./FDBTransaction.js";
+import type { EventCallback } from "./lib/types.js";
 
 class FDBRequest extends FakeEventTarget {
     public _result: any = null;
@@ -11,8 +12,8 @@ class FDBRequest extends FakeEventTarget {
     public source: FDBCursor | FDBIndex | FDBObjectStore | null = null;
     public transaction: FDBTransaction | null = null;
     public readyState: "done" | "pending" = "pending";
-    public onsuccess: EventListener | null = null;
-    public onerror: EventListener | null = null;
+    public onsuccess: EventCallback | null = null;
+    public onerror: EventCallback | null = null;
 
     public get error() {
         if (this.readyState === "pending") {

@@ -12,6 +12,7 @@ import ObjectStore from "./lib/ObjectStore.js";
 import validateKeyPath from "./lib/validateKeyPath.js";
 import closeConnection from "./lib/closeConnection.js";
 import type {
+    EventCallback,
     FDBTransactionOptions,
     KeyPath,
     TransactionMode,
@@ -52,10 +53,10 @@ class FDBDatabase extends FakeEventTarget {
     public version: number;
     public objectStoreNames: FakeDOMStringList;
 
-    public onabort: EventListener | null = null;
-    public onclose: EventListener | null = null;
-    public onerror: EventListener | null = null;
-    public onversionchange: EventListener | null = null;
+    public onabort: EventCallback | null = null;
+    public onclose: EventCallback | null = null;
+    public onerror: EventCallback | null = null;
+    public onversionchange: EventCallback | null = null;
 
     constructor(rawDatabase: Database) {
         super();

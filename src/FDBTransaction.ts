@@ -12,6 +12,7 @@ import FakeEventTarget from "./lib/FakeEventTarget.js";
 import { queueTask } from "./lib/scheduling.js";
 import type FDBDatabase from "./FDBDatabase.js";
 import type {
+    EventCallback,
     FDBTransactionDurability,
     RequestObj,
     RollbackLog,
@@ -34,9 +35,9 @@ class FDBTransaction extends FakeEventTarget {
     public durability: FDBTransactionDurability;
     public db: FDBDatabase;
     public error: Error | null = null;
-    public onabort: EventListener | null = null;
-    public oncomplete: EventListener | null = null;
-    public onerror: EventListener | null = null;
+    public onabort: EventCallback | null = null;
+    public oncomplete: EventCallback | null = null;
+    public onerror: EventCallback | null = null;
 
     public _scope: Set<string>;
     private _requests: {
