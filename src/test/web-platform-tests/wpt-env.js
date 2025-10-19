@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import "../../../auto/index.mjs";
-import FakeEvent from "../../../build/esm/lib/FakeEvent.js";
 import {
     AbortError,
     ConstraintError,
@@ -24,8 +23,6 @@ global.NotFoundError = NotFoundError;
 global.ReadOnlyError = ReadOnlyError;
 global.TransactionInactiveError = TransactionInactiveError;
 global.VersionError = VersionError;
-
-global.Event = FakeEvent;
 
 // idlharness.js sniffs for this to detect this as a "window" realm
 global.Window = function Window() {};

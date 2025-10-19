@@ -1,6 +1,6 @@
 import { InvalidStateError } from "./errors.js";
 import type FakeEvent from "./FakeEvent.js";
-import type { EventCallback, EventType } from "./types.js";
+import type { EventType } from "./types.js";
 
 type EventTypeProp =
     | "onabort"
@@ -13,7 +13,7 @@ type EventTypeProp =
     | "onversionchange";
 
 interface Listener {
-    callback: EventCallback;
+    callback: EventListenerOrEventListenerObject;
     capture: boolean;
     type: EventType;
 }
@@ -21,9 +21,9 @@ interface Listener {
 const stopped = (event: FakeEvent, listener: Listener) => {
     return (
         event.immediatePropagationStopped ||
-        (event.eventPhase === event.CAPTURING_PHASE &&
+        (event.eventPhase === Event.CAPTURING_PHASE &&
             listener.capture === false) ||
-        (event.eventPhase === event.BUBBLING_PHASE && listener.capture === true)
+        (event.eventPhase === Event.BUBBLING_PHASE && listener.capture === true)
     );
 };
 
@@ -32,10 +32,13 @@ const invokeEventListeners = (event: FakeEvent, obj: FakeEventTarget) => {
     event.currentTarget = obj;
 
     const errors: Error[] = [];
-    const invoke = (callback: EventCallback) => {
+    const invoke = (callback: EventListenerOrEventListenerObject) => {
         try {
-            // @ts-expect-error EventCallback's types are not quite right here
-            callback.call(event.currentTarget, event);
+            const listener =
+                typeof callback === "function"
+                    ? callback
+                    : callback.handleEvent;
+            listener.call(event.currentTarget, event);
         } catch (err) {
             errors.push(err);
         }
@@ -86,24 +89,35 @@ const invokeEventListeners = (event: FakeEvent, obj: FakeEventTarget) => {
     }
 };
 
-abstract class FakeEventTarget {
+abstract class FakeEventTarget extends EventTarget {
     public readonly listeners: Listener[] = [];
 
     // These will be overridden in individual subclasses and made not readonly
-    public readonly onabort: EventCallback | null | undefined;
-    public readonly onblocked: EventCallback | null | undefined;
-    public readonly onclose: EventCallback | null | undefined;
-    public readonly oncomplete: EventCallback | null | undefined;
-    public readonly onerror: EventCallback | null | undefined;
-    public readonly onsuccess: EventCallback | null | undefined;
-    public readonly onupgradeneeded: EventCallback | null | undefined;
-    public readonly onversionchange: EventCallback | null | undefined;
+    public readonly onabort: EventListener | null | undefined;
+    public readonly onblocked: EventListener | null | undefined;
+    public readonly onclose: EventListener | null | undefined;
+    public readonly oncomplete: EventListener | null | undefined;
+    public readonly onerror: EventListener | null | undefined;
+    public readonly onsuccess: EventListener | null | undefined;
+    public readonly onupgradeneeded: EventListener | null | undefined;
+    public readonly onversionchange: EventListener | null | undefined;
 
     public addEventListener(
         type: EventType,
-        callback: EventCallback,
-        capture = false,
+        callback: EventListenerOrEventListenerObject | null,
+        options?: boolean | AddEventListenerOptions | undefined,
     ) {
+        if (!callback) {
+            return;
+        }
+
+        const capture =
+            typeof options === "boolean"
+                ? options
+                : typeof options === "object" && options
+                  ? !!options.capture
+                  : false;
+
         this.listeners.push({
             callback,
             capture,
@@ -113,9 +127,20 @@ abstract class FakeEventTarget {
 
     public removeEventListener(
         type: EventType,
-        callback: EventCallback,
-        capture = false,
+        callback: EventListenerOrEventListenerObject | null,
+        options?: boolean | AddEventListenerOptions | undefined,
     ) {
+        if (!callback) {
+            return;
+        }
+
+        const capture =
+            typeof options === "boolean"
+                ? options
+                : typeof options === "object" && options
+                  ? !!options.capture
+                  : false;
+
         const i = this.listeners.findIndex((listener) => {
             return (
                 listener.type === type &&
@@ -138,21 +163,21 @@ abstract class FakeEventTarget {
         event.target = this;
         // NOT SURE WHEN THIS SHOULD BE SET        event.eventPath = [];
 
-        event.eventPhase = event.CAPTURING_PHASE;
+        event.eventPhase = Event.CAPTURING_PHASE;
         for (const obj of event.eventPath) {
             if (!event.propagationStopped) {
                 invokeEventListeners(event, obj);
             }
         }
 
-        event.eventPhase = event.AT_TARGET;
+        event.eventPhase = Event.AT_TARGET;
         if (!event.propagationStopped) {
             invokeEventListeners(event, event.target);
         }
 
         if (event.bubbles) {
             event.eventPath.reverse();
-            event.eventPhase = event.BUBBLING_PHASE;
+            event.eventPhase = Event.BUBBLING_PHASE;
             for (const obj of event.eventPath) {
                 if (!event.propagationStopped) {
                     invokeEventListeners(event, obj);
@@ -161,7 +186,7 @@ abstract class FakeEventTarget {
         }
 
         event.dispatched = false;
-        event.eventPhase = event.NONE;
+        event.eventPhase = Event.NONE;
         event.currentTarget = null;
 
         if (event.canceled) {

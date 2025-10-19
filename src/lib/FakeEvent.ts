@@ -1,14 +1,10 @@
 import type FakeEventTarget from "./FakeEventTarget.js";
 import type { EventType } from "./types.js";
 
-class Event {
+class FakeEvent extends Event {
     public eventPath: FakeEventTarget[] = [];
-    public type: EventType;
 
-    public readonly NONE = 0;
-    public readonly CAPTURING_PHASE = 1;
-    public readonly AT_TARGET = 2;
-    public readonly BUBBLING_PHASE = 3;
+    public readonly type!: EventType;
 
     // Flags
     public propagationStopped = false;
@@ -27,21 +23,11 @@ class Event {
     public isTrusted = false;
     public timeStamp = Date.now();
 
-    public bubbles: boolean;
-    public cancelable: boolean;
-
     constructor(
         type: EventType,
         eventInitDict: { bubbles?: boolean; cancelable?: boolean } = {},
     ) {
-        this.type = type;
-
-        this.bubbles =
-            eventInitDict.bubbles !== undefined ? eventInitDict.bubbles : false;
-        this.cancelable =
-            eventInitDict.cancelable !== undefined
-                ? eventInitDict.cancelable
-                : false;
+        super(type, eventInitDict);
     }
 
     public preventDefault() {
@@ -60,4 +46,4 @@ class Event {
     }
 }
 
-export default Event;
+export default FakeEvent;

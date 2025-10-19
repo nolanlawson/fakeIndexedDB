@@ -5,13 +5,6 @@ import type FDBRequest from "../FDBRequest.js";
 
 export type CursorSource = FDBIndex | FDBObjectStore;
 
-interface EventInCallback extends Event {
-    target: any;
-    error: Error | null;
-}
-
-export type EventCallback = (event: EventInCallback) => void;
-
 export type EventType =
     | "abort"
     | "blocked"

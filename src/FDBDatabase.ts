@@ -52,6 +52,11 @@ class FDBDatabase extends FakeEventTarget {
     public version: number;
     public objectStoreNames: FakeDOMStringList;
 
+    public onabort: EventListener | null = null;
+    public onclose: EventListener | null = null;
+    public onerror: EventListener | null = null;
+    public onversionchange: EventListener | null = null;
+
     constructor(rawDatabase: Database) {
         super();
 
