@@ -1,8 +1,18 @@
 {
-    "presets": ["@babel/preset-typescript"],
-    "env": {
-        "cjs": {
-            "plugins": ["@babel/plugin-transform-modules-commonjs", "add-module-exports"]
-        }
+  "presets": [
+    [
+      "@babel/preset-typescript",
+      {
+        "allowDeclareFields": true
+      }
+    ]
+  ],
+  "env": {
+    "cjs": {
+      "plugins": [
+        "@babel/plugin-transform-modules-commonjs",
+        "add-module-exports"
+      ]
     }
+  }
 }

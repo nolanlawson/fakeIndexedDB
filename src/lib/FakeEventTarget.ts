@@ -1,4 +1,5 @@
 import { InvalidStateError } from "./errors.js";
+import { defineEventHandlerIDLAttributes } from "./defineEventHandlerIDLAttributes.js";
 import type FakeEvent from "./FakeEvent.js";
 import type { EventCallback, EventType } from "./types.js";
 
@@ -95,14 +96,14 @@ abstract class FakeEventTarget extends EventTarget {
     public readonly listeners: Listener[] = [];
 
     // These will be overridden in individual subclasses and made not readonly
-    public readonly onabort: EventCallback | null | undefined;
-    public readonly onblocked: EventCallback | null | undefined;
-    public readonly onclose: EventCallback | null | undefined;
-    public readonly oncomplete: EventCallback | null | undefined;
-    public readonly onerror: EventCallback | null | undefined;
-    public readonly onsuccess: EventCallback | null | undefined;
-    public readonly onupgradeneeded: EventCallback | null | undefined;
-    public readonly onversionchange: EventCallback | null | undefined;
+    declare public readonly onabort: EventCallback | null | undefined;
+    declare public readonly onblocked: EventCallback | null | undefined;
+    declare public readonly onclose: EventCallback | null | undefined;
+    declare public readonly oncomplete: EventCallback | null | undefined;
+    declare public readonly onerror: EventCallback | null | undefined;
+    declare public readonly onsuccess: EventCallback | null | undefined;
+    declare public readonly onupgradeneeded: EventCallback | null | undefined;
+    declare public readonly onversionchange: EventCallback | null | undefined;
 
     public addEventListener(
         type: EventType,
@@ -197,5 +198,16 @@ abstract class FakeEventTarget extends EventTarget {
         return true;
     }
 }
+
+defineEventHandlerIDLAttributes(FakeEventTarget.prototype, [
+    "onabort",
+    "onclose",
+    "onerror",
+    "onversionchange",
+    "onupgradeneeded",
+    "onblocked",
+    "oncomplete",
+    "onsuccess",
+]);
 
 export default FakeEventTarget;

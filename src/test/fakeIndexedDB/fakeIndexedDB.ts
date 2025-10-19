@@ -430,6 +430,56 @@ describe("fakeIndexedDB Tests", () => {
         };
     });
 
+    it("allows handleEvent on event listeners", () => {
+        return new Promise<void>((resolve, reject) => {
+            const request = fakeIndexedDB.open("test" + Math.random());
+            request.addEventListener("upgradeneeded", {
+                handleEvent(e) {
+                    const db = (e.target as any).result as FDBDatabase;
+                    db.createObjectStore("store", {
+                        autoIncrement: true,
+                    });
+                },
+            });
+            request.addEventListener("success", {
+                handleEvent(e) {
+                    const db = (e.target as any).result as FDBDatabase;
+
+                    const tx = db.transaction("store", "readwrite");
+                    tx.objectStore("store").put(
+                        {
+                            whatever: "foo",
+                        },
+                        1,
+                    );
+                    tx.onerror = (e) => reject(e.target.error);
+
+                    tx.addEventListener("complete", {
+                        handleEvent() {
+                            const tx2 = db.transaction("store", "readonly");
+                            const request2 = tx2.objectStore("store").get(1);
+
+                            let called = false;
+                            request2.onerror = (e) => reject(e.target.error);
+                            request2.addEventListener("success", {
+                                handleEvent() {
+                                    called = true;
+                                },
+                            });
+
+                            tx2.addEventListener("complete", {
+                                handleEvent() {
+                                    assert.ok(called);
+                                    resolve();
+                                },
+                            });
+                        },
+                    });
+                },
+            });
+        });
+    });
+
     it("properly handles compound keys (issue #18)", (done) => {
         const request = fakeIndexedDB.open("test", 3);
         request.onupgradeneeded = () => {

@@ -4,7 +4,7 @@ import type { EventType } from "./types.js";
 class FakeEvent extends Event {
     public eventPath: FakeEventTarget[] = [];
 
-    public readonly type!: EventType;
+    declare public readonly type: EventType;
 
     // Flags
     public propagationStopped = false;

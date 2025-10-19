@@ -53,10 +53,10 @@ class FDBDatabase extends FakeEventTarget {
     public version: number;
     public objectStoreNames: FakeDOMStringList;
 
-    public onabort: EventCallback | null = null;
-    public onclose: EventCallback | null = null;
-    public onerror: EventCallback | null = null;
-    public onversionchange: EventCallback | null = null;
+    declare public onabort: EventCallback | null;
+    declare public onclose: EventCallback | null;
+    declare public onerror: EventCallback | null;
+    declare public onversionchange: EventCallback | null;
 
     constructor(rawDatabase: Database) {
         super();
