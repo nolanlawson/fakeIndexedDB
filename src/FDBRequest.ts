@@ -9,7 +9,12 @@ import type { EventCallback } from "./lib/types.js";
 class FDBRequest extends FakeEventTarget {
     public _result: any = null;
     public _error: Error | null | undefined = null;
-    public source: FDBCursor | FDBIndex | FDBObjectStore | null = null;
+
+    #source: FDBCursor | FDBIndex | FDBObjectStore | null = null;
+    public get source() {
+        return this.#source;
+    }
+
     public transaction: FDBTransaction | null = null;
     public readyState: "done" | "pending" = "pending";
     public onsuccess: EventCallback | null = null;
@@ -41,5 +46,10 @@ class FDBRequest extends FakeEventTarget {
         return "IDBRequest";
     }
 }
+
+Object.defineProperty(FDBRequest.prototype, "source", {
+    ...Object.getOwnPropertyDescriptor(FDBRequest.prototype, "source"),
+    enumerable: true,
+});
 
 export default FDBRequest;
