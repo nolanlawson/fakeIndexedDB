@@ -147,5 +147,8 @@
     },
     "lint-staged": {
         "*.{js,json,ts,cjs,mjs}": "prettier --write"
+    },
+    "dependencies": {
+        "mitata": "^1.0.34"
     }
 }
